@@ -267,7 +267,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                             <div className="grid gap-2">
                                 <Label>Quantity</Label>
                                 <div className="flex items-center space-x-4">
-                                    <Button size="icon" variant="outline" onClick={() => handleStockChange(-1)}><Minus className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="outline" onClick={() => handleStockChange(-1)} disabled={item.quantity <= 0}><Minus className="h-4 w-4" /></Button>
                                     <span className="text-2xl font-bold">{item.quantity}</span>
                                     <Button size="icon" variant="outline" onClick={() => handleStockChange(1)}><Plus className="h-4 w-4" /></Button>
                                 </div>

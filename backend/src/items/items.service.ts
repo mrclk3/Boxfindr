@@ -10,35 +10,42 @@ export class ItemsService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditLogsService,
-  ) {}
+  ) { }
 
   async create(
     createItemDto: CreateItemDto,
     photoUrl?: string,
     userId?: number,
   ) {
-    const item = await this.prisma.item.create({
-      data: {
-        name: createItemDto.name,
-        quantity: +createItemDto.quantity,
-        minQuantity: +createItemDto.minQuantity,
-        photoUrl: photoUrl,
-        crate: { connect: { id: +createItemDto.crateId } },
-        ...(createItemDto.categoryId
-          ? { category: { connect: { id: +createItemDto.categoryId } } }
-          : {}),
-      },
-    });
-    if (userId) {
-      await this.auditService.logAction(
-        userId,
-        ActionType.CREATE,
-        item.id,
-        `Created item ${item.name}`,
-        item.quantity,
-      );
+    console.log('Creating item:', createItemDto, photoUrl, userId);
+    try {
+      const item = await this.prisma.item.create({
+        data: {
+          name: createItemDto.name,
+          // Ensure numbers are numbers, fallback to 0 if missing/NaN to avoid Prisma crash
+          quantity: +(createItemDto.quantity || 0),
+          minQuantity: +(createItemDto.minQuantity || 0),
+          photoUrl: photoUrl,
+          crate: { connect: { id: +createItemDto.crateId } },
+          ...(createItemDto.categoryId
+            ? { category: { connect: { id: +createItemDto.categoryId } } }
+            : {}),
+        },
+      });
+      if (userId) {
+        await this.auditService.logAction(
+          userId,
+          ActionType.CREATE,
+          item.id,
+          `Created item ${item.name}`,
+          item.quantity,
+        );
+      }
+      return item;
+    } catch (error) {
+      console.error('Error creating item:', error);
+      throw error;
     }
-    return item;
   }
 
   async findAll(query?: string, lowStock?: boolean) {
@@ -48,14 +55,20 @@ export class ItemsService {
       where.name = { contains: query, mode: 'insensitive' };
     }
 
-    if (lowStock) {
-      where.quantity = { lt: 5 };
-    }
+    // Since we cannot compare columns in where clause easily with Prisma,
+    // we fetch with other filters first and then filter in memory for lowStock.
+    // If lowStock is false, we don't modify the query results further (unless pagination is added later).
 
-    return this.prisma.item.findMany({
+    const items = await this.prisma.item.findMany({
       where,
       include: { crate: { include: { cabinet: true } } },
     });
+
+    if (lowStock) {
+      return items.filter((item) => item.quantity < item.minQuantity);
+    }
+
+    return items;
   }
 
   findOne(id: number) {
@@ -66,19 +79,35 @@ export class ItemsService {
   }
 
   async update(id: number, updateItemDto: UpdateItemDto, userId?: number) {
-    const item = await this.prisma.item.update({
-      where: { id },
-      data: updateItemDto,
-    });
-    if (userId) {
-      await this.auditService.logAction(
-        userId,
-        ActionType.UPDATE,
-        item.id,
-        'Updated item details',
-      );
+    console.log('Updating item:', id, updateItemDto, userId);
+    try {
+      // Explicitly case known numeric fields to ensure they are not strings
+      const data: any = { ...updateItemDto };
+      if (data.quantity !== undefined && data.quantity !== null) data.quantity = +data.quantity;
+      if (data.minQuantity !== undefined && data.minQuantity !== null) data.minQuantity = +data.minQuantity;
+      if (data.crateId !== undefined && data.crateId !== null) data.crateId = +data.crateId;
+      if (data.categoryId !== undefined && data.categoryId !== null) data.categoryId = +data.categoryId;
+
+      // Clean up fields that shouldn't be here if they came from partial DTO but are not in schema as scalars
+      // e.g. if categoryId is intentionally passed.
+
+      const item = await this.prisma.item.update({
+        where: { id },
+        data: data,
+      });
+      if (userId) {
+        await this.auditService.logAction(
+          userId,
+          ActionType.UPDATE,
+          item.id,
+          'Updated item details',
+        );
+      }
+      return item;
+    } catch (error) {
+      console.error('Error updating item:', error);
+      throw error;
     }
-    return item;
   }
 
   async updateQuantity(id: number, change: number, userId: number) {
@@ -86,9 +115,14 @@ export class ItemsService {
     const item = await this.prisma.item.findUnique({ where: { id } });
     if (!item) throw new NotFoundException('Item not found');
 
+    const newQuantity = item.quantity + change;
+    if (newQuantity < 0) {
+      throw new Error('Quantity cannot be negative'); // Simple error, controller handles 500 or we can use BadRequestException
+    }
+
     const newItem = await this.prisma.item.update({
       where: { id },
-      data: { quantity: item.quantity + change },
+      data: { quantity: newQuantity },
     });
 
     await this.auditService.logAction(
@@ -145,9 +179,15 @@ export class ItemsService {
 
   async getStats() {
     const totalItems = await this.prisma.item.count();
-    const lowStockItems = await this.prisma.item.count({
-      where: { quantity: { lt: 5 } },
+
+    // Fetch all items to check minQuantity vs quantity
+    // Optimization: Depending on item count, raw query might be better, but this is fine for < 10k items
+    const allItems = await this.prisma.item.findMany({
+      select: { quantity: true, minQuantity: true }
     });
+
+    const lowStockItems = allItems.filter(i => i.quantity < i.minQuantity).length;
+
     const totalQuantity = await this.prisma.item.aggregate({
       _sum: { quantity: true },
     });
@@ -178,6 +218,31 @@ export class ItemsService {
       totalQuantity: totalQuantity._sum.quantity || 0,
       categories: categoryStats,
     };
+  }
+
+  async getShoppingList(): Promise<string> {
+    const items = await this.prisma.item.findMany({
+      include: {
+        category: true,
+        crate: {
+          include: { cabinet: true }
+        }
+      }
+    });
+
+    const lowStockItems = items.filter(item => item.quantity < item.minQuantity);
+
+    const header = 'Item,Category,Current Quantity,Min Quantity,Missing Amount,Cabinet,Crate\n';
+    const rows = lowStockItems.map(item => {
+      const missing = item.minQuantity - item.quantity;
+      // Handle potential nulls and special characters (simple CSV escaping)
+      const name = item.name.replace(/"/g, '""');
+      const category = (item.category?.name || '').replace(/"/g, '""');
+
+      return `"${name}","${category}",${item.quantity},${item.minQuantity},${missing},"${item.crate.cabinet.number}","${item.crate.number}"`;
+    }).join('\n');
+
+    return header + rows;
   }
 
   async remove(id: number) {

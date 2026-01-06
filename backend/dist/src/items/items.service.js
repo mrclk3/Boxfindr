@@ -22,35 +22,43 @@ let ItemsService = class ItemsService {
         this.auditService = auditService;
     }
     async create(createItemDto, photoUrl, userId) {
-        const item = await this.prisma.item.create({
-            data: {
-                name: createItemDto.name,
-                quantity: +createItemDto.quantity,
-                minQuantity: +createItemDto.minQuantity,
-                photoUrl: photoUrl,
-                crate: { connect: { id: +createItemDto.crateId } },
-                ...(createItemDto.categoryId
-                    ? { category: { connect: { id: +createItemDto.categoryId } } }
-                    : {}),
-            },
-        });
-        if (userId) {
-            await this.auditService.logAction(userId, client_1.ActionType.CREATE, item.id, `Created item ${item.name}`, item.quantity);
+        console.log('Creating item:', createItemDto, photoUrl, userId);
+        try {
+            const item = await this.prisma.item.create({
+                data: {
+                    name: createItemDto.name,
+                    quantity: +(createItemDto.quantity || 0),
+                    minQuantity: +(createItemDto.minQuantity || 0),
+                    photoUrl: photoUrl,
+                    crate: { connect: { id: +createItemDto.crateId } },
+                    ...(createItemDto.categoryId
+                        ? { category: { connect: { id: +createItemDto.categoryId } } }
+                        : {}),
+                },
+            });
+            if (userId) {
+                await this.auditService.logAction(userId, client_1.ActionType.CREATE, item.id, `Created item ${item.name}`, item.quantity);
+            }
+            return item;
         }
-        return item;
+        catch (error) {
+            console.error('Error creating item:', error);
+            throw error;
+        }
     }
     async findAll(query, lowStock) {
         const where = {};
         if (query) {
             where.name = { contains: query, mode: 'insensitive' };
         }
-        if (lowStock) {
-            where.quantity = { lt: 5 };
-        }
-        return this.prisma.item.findMany({
+        const items = await this.prisma.item.findMany({
             where,
             include: { crate: { include: { cabinet: true } } },
         });
+        if (lowStock) {
+            return items.filter((item) => item.quantity < item.minQuantity);
+        }
+        return items;
     }
     findOne(id) {
         return this.prisma.item.findUnique({
@@ -59,22 +67,42 @@ let ItemsService = class ItemsService {
         });
     }
     async update(id, updateItemDto, userId) {
-        const item = await this.prisma.item.update({
-            where: { id },
-            data: updateItemDto,
-        });
-        if (userId) {
-            await this.auditService.logAction(userId, client_1.ActionType.UPDATE, item.id, 'Updated item details');
+        console.log('Updating item:', id, updateItemDto, userId);
+        try {
+            const data = { ...updateItemDto };
+            if (data.quantity !== undefined && data.quantity !== null)
+                data.quantity = +data.quantity;
+            if (data.minQuantity !== undefined && data.minQuantity !== null)
+                data.minQuantity = +data.minQuantity;
+            if (data.crateId !== undefined && data.crateId !== null)
+                data.crateId = +data.crateId;
+            if (data.categoryId !== undefined && data.categoryId !== null)
+                data.categoryId = +data.categoryId;
+            const item = await this.prisma.item.update({
+                where: { id },
+                data: data,
+            });
+            if (userId) {
+                await this.auditService.logAction(userId, client_1.ActionType.UPDATE, item.id, 'Updated item details');
+            }
+            return item;
         }
-        return item;
+        catch (error) {
+            console.error('Error updating item:', error);
+            throw error;
+        }
     }
     async updateQuantity(id, change, userId) {
         const item = await this.prisma.item.findUnique({ where: { id } });
         if (!item)
             throw new common_1.NotFoundException('Item not found');
+        const newQuantity = item.quantity + change;
+        if (newQuantity < 0) {
+            throw new Error('Quantity cannot be negative');
+        }
         const newItem = await this.prisma.item.update({
             where: { id },
-            data: { quantity: item.quantity + change },
+            data: { quantity: newQuantity },
         });
         await this.auditService.logAction(userId, client_1.ActionType.STOCK_CHANGE, id, `Stock change ${change}`, change);
         return newItem;
@@ -105,9 +133,10 @@ let ItemsService = class ItemsService {
     }
     async getStats() {
         const totalItems = await this.prisma.item.count();
-        const lowStockItems = await this.prisma.item.count({
-            where: { quantity: { lt: 5 } },
+        const allItems = await this.prisma.item.findMany({
+            select: { quantity: true, minQuantity: true }
         });
+        const lowStockItems = allItems.filter(i => i.quantity < i.minQuantity).length;
         const totalQuantity = await this.prisma.item.aggregate({
             _sum: { quantity: true },
         });
@@ -131,6 +160,25 @@ let ItemsService = class ItemsService {
             totalQuantity: totalQuantity._sum.quantity || 0,
             categories: categoryStats,
         };
+    }
+    async getShoppingList() {
+        const items = await this.prisma.item.findMany({
+            include: {
+                category: true,
+                crate: {
+                    include: { cabinet: true }
+                }
+            }
+        });
+        const lowStockItems = items.filter(item => item.quantity < item.minQuantity);
+        const header = 'Item,Category,Current Quantity,Min Quantity,Missing Amount,Cabinet,Crate\n';
+        const rows = lowStockItems.map(item => {
+            const missing = item.minQuantity - item.quantity;
+            const name = item.name.replace(/"/g, '""');
+            const category = (item.category?.name || '').replace(/"/g, '""');
+            return `"${name}","${category}",${item.quantity},${item.minQuantity},${missing},"${item.crate.cabinet.number}","${item.crate.number}"`;
+        }).join('\n');
+        return header + rows;
     }
     async remove(id) {
         const item = await this.prisma.item.findUnique({ where: { id } });

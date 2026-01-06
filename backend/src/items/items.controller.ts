@@ -12,7 +12,9 @@ import {
   UploadedFile,
   ParseIntPipe,
   Request,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ItemsService } from './items.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
@@ -26,7 +28,7 @@ import { extname } from 'path';
 
 @Controller('items')
 export class ItemsController {
-  constructor(private readonly itemsService: ItemsService) {}
+  constructor(private readonly itemsService: ItemsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -51,6 +53,15 @@ export class ItemsController {
   ) {
     const photoUrl = file ? `/uploads/${file.filename}` : undefined;
     return this.itemsService.create(createItemDto, photoUrl, req.user.userId);
+  }
+
+  @Get('export/shopping-list')
+  @UseGuards(JwtAuthGuard)
+  async exportShoppingList(@Res() res: Response) {
+    const csv = await this.itemsService.getShoppingList();
+    res.header('Content-Type', 'text/csv');
+    res.header('Content-Disposition', 'attachment; filename="shopping-list.csv"');
+    res.send(csv);
   }
 
   @Get('search')

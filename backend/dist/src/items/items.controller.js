@@ -33,6 +33,12 @@ let ItemsController = class ItemsController {
         const photoUrl = file ? `/uploads/${file.filename}` : undefined;
         return this.itemsService.create(createItemDto, photoUrl, req.user.userId);
     }
+    async exportShoppingList(res) {
+        const csv = await this.itemsService.getShoppingList();
+        res.header('Content-Type', 'text/csv');
+        res.header('Content-Disposition', 'attachment; filename="shopping-list.csv"');
+        res.send(csv);
+    }
     search(q) {
         return this.itemsService.findAll(q);
     }
@@ -84,6 +90,14 @@ __decorate([
     __metadata("design:paramtypes", [create_item_dto_1.CreateItemDto, Object, Object]),
     __metadata("design:returntype", void 0)
 ], ItemsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('export/shopping-list'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ItemsController.prototype, "exportShoppingList", null);
 __decorate([
     (0, common_1.Get)('search'),
     __param(0, (0, common_1.Query)('q')),
