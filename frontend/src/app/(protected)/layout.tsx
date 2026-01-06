@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -62,7 +63,9 @@ export default function ProtectedLayout({
     return (
         <div className="flex min-h-screen flex-col bg-background pb-20">
             <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b bg-background px-4 shadow-sm bg-gradient-to-r from-background to-secondary/10">
-                <div className="font-bold text-lg text-primary">Boxfindr</div>
+                <Link href="/dashboard" className="font-bold text-lg text-primary hover:opacity-80 transition-opacity">
+                    Boxfindr
+                </Link>
                 <div className="flex items-center gap-2">
                     <ModeToggle />
                     {isAuthenticated && user ? (
