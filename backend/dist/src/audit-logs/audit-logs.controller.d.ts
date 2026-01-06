@@ -2,11 +2,11 @@ import { AuditLogsService } from './audit-logs.service';
 export declare class AuditLogsController {
     private readonly auditLogsService;
     constructor(auditLogsService: AuditLogsService);
-    findAll(): Promise<({
+    findAll(userId?: string, action?: string, startDate?: string, endDate?: string): Promise<({
         user: {
             id: number;
-            email: string;
             name: string | null;
+            email: string;
             password: string;
             role: import(".prisma/client").$Enums.Role;
             createdAt: Date;
@@ -17,8 +17,8 @@ export declare class AuditLogsController {
             name: string;
             createdAt: Date;
             updatedAt: Date;
-            categoryId: number | null;
             crateId: number;
+            categoryId: number | null;
             quantity: number;
             minQuantity: number;
             photoUrl: string | null;
@@ -28,10 +28,10 @@ export declare class AuditLogsController {
     } & {
         id: number;
         timestamp: Date;
+        userId: number;
+        itemId: number | null;
         action: import(".prisma/client").$Enums.ActionType;
         quantityChange: number | null;
         details: string | null;
-        userId: number;
-        itemId: number | null;
     })[]>;
 }

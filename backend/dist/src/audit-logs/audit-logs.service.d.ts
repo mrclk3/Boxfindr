@@ -4,19 +4,24 @@ export declare class AuditLogsService {
     private prisma;
     constructor(prisma: PrismaService);
     logAction(userId: number, action: ActionType, itemId?: number, details?: string, quantityChange?: number): Promise<{
-        id: number;
         timestamp: Date;
         action: import(".prisma/client").$Enums.ActionType;
         quantityChange: number | null;
         details: string | null;
+        id: number;
         userId: number;
         itemId: number | null;
     }>;
-    findAll(): Promise<({
+    findAll(filters: {
+        userId?: number;
+        action?: ActionType;
+        startDate?: Date;
+        endDate?: Date;
+    }): Promise<({
         user: {
             id: number;
-            email: string;
             name: string | null;
+            email: string;
             password: string;
             role: import(".prisma/client").$Enums.Role;
             createdAt: Date;
@@ -27,8 +32,8 @@ export declare class AuditLogsService {
             name: string;
             createdAt: Date;
             updatedAt: Date;
-            categoryId: number | null;
             crateId: number;
+            categoryId: number | null;
             quantity: number;
             minQuantity: number;
             photoUrl: string | null;
@@ -36,11 +41,11 @@ export declare class AuditLogsService {
             lentTo: string | null;
         } | null;
     } & {
-        id: number;
         timestamp: Date;
         action: import(".prisma/client").$Enums.ActionType;
         quantityChange: number | null;
         details: string | null;
+        id: number;
         userId: number;
         itemId: number | null;
     })[]>;

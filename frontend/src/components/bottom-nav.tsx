@@ -1,19 +1,33 @@
-"use client"
-
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Scan, Box, Layers } from "lucide-react"
+import { Home, Scan, Box, Layers, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function BottomNav() {
     const pathname = usePathname()
+    const [isAdmin, setIsAdmin] = useState(false)
+
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]))
+                if (payload.role === 'ADMIN') setIsAdmin(true)
+            } catch (e) { }
+        }
+    }, [])
 
     const links = [
         { href: "/dashboard", label: "Home", icon: Home },
         { href: "/cabinets", label: "Cabinets", icon: Box },
-        { href: "/categories", label: "Cats", icon: Layers }, // Short label for mobile
+        { href: "/categories", label: "Cats", icon: Layers },
         { href: "/scan", label: "Scan", icon: Scan },
     ]
+
+    if (isAdmin) {
+        links.push({ href: "/audit-logs", label: "History", icon: History })
+    }
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-2">

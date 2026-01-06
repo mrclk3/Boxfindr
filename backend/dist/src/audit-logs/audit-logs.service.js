@@ -28,8 +28,21 @@ let AuditLogsService = class AuditLogsService {
             },
         });
     }
-    async findAll() {
+    async findAll(filters) {
+        const where = {};
+        if (filters.userId)
+            where.userId = filters.userId;
+        if (filters.action)
+            where.action = filters.action;
+        if (filters.startDate || filters.endDate) {
+            where.timestamp = {};
+            if (filters.startDate)
+                where.timestamp.gte = filters.startDate;
+            if (filters.endDate)
+                where.timestamp.lte = filters.endDate;
+        }
         return this.prisma.auditLog.findMany({
+            where,
             include: { user: true, item: true },
             orderBy: { timestamp: 'desc' },
         });

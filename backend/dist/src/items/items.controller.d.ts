@@ -9,50 +9,50 @@ export declare class ItemsController {
     private readonly itemsService;
     constructor(itemsService: ItemsService);
     create(createItemDto: CreateItemDto, file: Express.Multer.File, req: any): Promise<{
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     }>;
     exportShoppingList(res: Response): Promise<void>;
     search(q: string): Promise<({
         crate: {
             cabinet: {
                 number: string;
+                id: number;
                 createdAt: Date;
                 updatedAt: Date;
-                id: number;
                 qrCode: string;
                 location: string | null;
             };
         } & {
             number: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
             categoryId: number | null;
             qrCode: string;
             cabinetId: number;
         };
     } & {
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     })[]>;
     getStats(): Promise<{
         totalItems: number;
@@ -67,138 +67,138 @@ export declare class ItemsController {
         crate: {
             cabinet: {
                 number: string;
+                id: number;
                 createdAt: Date;
                 updatedAt: Date;
-                id: number;
                 qrCode: string;
                 location: string | null;
             };
         } & {
             number: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
             categoryId: number | null;
             qrCode: string;
             cabinetId: number;
         };
     } & {
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     })[]>;
     findOne(id: number): import(".prisma/client").Prisma.Prisma__ItemClient<({
-        crate: {
-            cabinet: {
-                number: string;
-                createdAt: Date;
-                updatedAt: Date;
-                id: number;
-                qrCode: string;
-                location: string | null;
-            };
-        } & {
-            number: string;
-            createdAt: Date;
-            updatedAt: Date;
-            id: number;
-            categoryId: number | null;
-            qrCode: string;
-            cabinetId: number;
-        };
         auditLogs: {
-            id: number;
             timestamp: Date;
-            userId: number;
-            itemId: number | null;
             action: import(".prisma/client").$Enums.ActionType;
             quantityChange: number | null;
             details: string | null;
+            id: number;
+            userId: number;
+            itemId: number | null;
         }[];
+        crate: {
+            cabinet: {
+                number: string;
+                id: number;
+                createdAt: Date;
+                updatedAt: Date;
+                qrCode: string;
+                location: string | null;
+            };
+        } & {
+            number: string;
+            id: number;
+            createdAt: Date;
+            updatedAt: Date;
+            categoryId: number | null;
+            qrCode: string;
+            cabinetId: number;
+        };
     } & {
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
     update(id: number, updateItemDto: UpdateItemDto, req: any): Promise<{
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     }>;
     updateQuantity(id: number, updateQuantityDto: UpdateQuantityDto, req: any): Promise<{
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     }>;
     lend(id: number, lendItemDto: LendItemDto, req: any): Promise<{
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     }>;
     transfer(id: number, transferItemDto: TransferItemDto, req: any): Promise<{
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     }>;
     remove(id: number): Promise<{
+        id: number;
         name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        crateId: number;
+        categoryId: number | null;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
         status: import(".prisma/client").$Enums.ItemStatus;
         lentTo: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        id: number;
-        crateId: number;
-        categoryId: number | null;
     }>;
 }
