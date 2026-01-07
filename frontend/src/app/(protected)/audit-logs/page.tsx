@@ -28,11 +28,6 @@ export default function AuditLogsPage() {
     const [action, setAction] = useState<string>("ALL")
     const [startDate, setStartDate] = useState("")
     const [endDate, setEndDate] = useState("")
-    const [userSearch, setUserSearch] = useState("") // Should be UserId in ideal world, but let's filter after fetch or add specific user search implementation later if complex. 
-    // Wait, backend expects userId ID. Mapping email to ID is hard without a user list. 
-    // For now, let's keep it simple: Filter by Action and Date first. User filter might need a UserSelect component.
-
-    // Let's implement Action and Date filters effectively.
 
     useEffect(() => {
         // Check Admin
@@ -41,7 +36,7 @@ export default function AuditLogsPage() {
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]))
                 if (payload.role === 'ADMIN') setIsAdmin(true)
-            } catch (e) { }
+            } catch { }
         }
     }, [])
 
@@ -66,6 +61,7 @@ export default function AuditLogsPage() {
     useEffect(() => {
         if (isAdmin) fetchLogs()
         else setLoading(false)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAdmin])
 
     const handleFilter = (e: React.FormEvent) => {

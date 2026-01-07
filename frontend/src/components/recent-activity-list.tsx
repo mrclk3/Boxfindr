@@ -38,7 +38,7 @@ export function RecentActivityList() {
                 setLogs(Array.isArray(data) ? data.slice(0, 10) : []) // Limit to 10
                 setLoading(false)
             })
-            .catch(err => setLoading(false))
+            .catch(() => setLoading(false))
     }, [])
 
     if (loading) return <div className="p-4 flex justify-center"><Loader2 className="animate-spin h-5 w-5 text-muted-foreground" /></div>
