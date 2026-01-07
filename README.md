@@ -1,8 +1,8 @@
-# Boxfindr 📦
+# Boxfindr
 
 **Boxfindr** is a modern, web-based inventory management system designed to help you organize your items, cabinets, and crates with ease. Built with a focus on usability and mobile-first design, it makes tracking your belongings simple and efficient.
 
-## ✨ Features
+## Features
 
 - **cabinet & Crate Management**: Organize your storage into physical cabinets and crates (boxes).
 - **Item Tracking**: Keep track of item quantities, locations, and low-stock alerts.
@@ -12,14 +12,14 @@
 - **Mobile Friendly**: Responsive UI built with [Shadcn UI](https://ui.shadcn.com/) and Tailwind CSS.
 - **Theme Support**: Dark and Light mode support.
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **Frontend**: [Next.js](https://nextjs.org/) (App Router, React 19), Tailwind CSS, Shadcn UI.
 - **Backend**: [NestJS](https://nestjs.com/) (TypeScript), Prisma ORM.
 - **Database**: PostgreSQL.
 - **Authentication**: JWT-based auth with passport.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -73,10 +73,10 @@
 - **Admin**: `admin@codelab.eu` / `admin123`
 - **User**: `user@codelab.eu` / `user123`
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
