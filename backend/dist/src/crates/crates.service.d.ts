@@ -6,21 +6,21 @@ export declare class CratesService {
     constructor(prisma: PrismaService);
     create(createCrateDto: CreateCrateDto): import(".prisma/client").Prisma.Prisma__CrateClient<{
         number: string;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        qrCode: string;
         cabinetId: number;
         categoryId: number | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     findAll(): import(".prisma/client").Prisma.PrismaPromise<({
         cabinet: {
             number: string;
-            qrCode: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
             location: string | null;
+            qrCode: string;
         };
         category: {
             id: number;
@@ -28,28 +28,28 @@ export declare class CratesService {
         } | null;
     } & {
         number: string;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        qrCode: string;
         cabinetId: number;
         categoryId: number | null;
     })[]>;
     findOne(id: number): import(".prisma/client").Prisma.Prisma__CrateClient<({
         cabinet: {
             number: string;
-            qrCode: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
             location: string | null;
+            qrCode: string;
         };
         items: {
+            id: number;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
             categoryId: number | null;
-            name: string;
             crateId: number;
             quantity: number;
             minQuantity: number;
@@ -59,28 +59,28 @@ export declare class CratesService {
         }[];
     } & {
         number: string;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        qrCode: string;
         cabinetId: number;
         categoryId: number | null;
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
     findOneByQr(qrCode: string): Promise<{
         cabinet: {
             number: string;
-            qrCode: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
             location: string | null;
+            qrCode: string;
         };
         items: {
+            id: number;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
             categoryId: number | null;
-            name: string;
             crateId: number;
             quantity: number;
             minQuantity: number;
@@ -90,37 +90,37 @@ export declare class CratesService {
         }[];
     } & {
         number: string;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        qrCode: string;
         cabinetId: number;
         categoryId: number | null;
     }>;
     update(id: number, updateCrateDto: UpdateCrateDto): import(".prisma/client").Prisma.Prisma__CrateClient<{
         number: string;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        qrCode: string;
         cabinetId: number;
         categoryId: number | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     move(id: number, targetCabinetId: number): Promise<{
         number: string;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        qrCode: string;
         cabinetId: number;
         categoryId: number | null;
     }>;
     remove(id: number): Promise<{
         number: string;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        qrCode: string;
         cabinetId: number;
         categoryId: number | null;
     }>;

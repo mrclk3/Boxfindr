@@ -6,62 +6,62 @@ export declare class CabinetsController {
     constructor(cabinetsService: CabinetsService);
     create(createCabinetDto: CreateCabinetDto): Promise<{
         number: string;
-        location: string | null;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        location: string | null;
+        qrCode: string;
     }>;
     findAll(includeCrates?: string): import(".prisma/client").Prisma.PrismaPromise<({
         crates: {
             number: string;
-            qrCode: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
+            qrCode: string;
             cabinetId: number;
             categoryId: number | null;
         }[];
     } & {
         number: string;
-        location: string | null;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        location: string | null;
+        qrCode: string;
     })[]>;
     findOne(id: number): import(".prisma/client").Prisma.Prisma__CabinetClient<({
         crates: {
             number: string;
-            qrCode: string;
+            id: number;
             createdAt: Date;
             updatedAt: Date;
-            id: number;
+            qrCode: string;
             cabinetId: number;
             categoryId: number | null;
         }[];
     } & {
         number: string;
-        location: string | null;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        location: string | null;
+        qrCode: string;
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
     update(id: number, updateCabinetDto: UpdateCabinetDto): import(".prisma/client").Prisma.Prisma__CabinetClient<{
         number: string;
-        location: string | null;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        location: string | null;
+        qrCode: string;
     }, never, import("@prisma/client/runtime/library").DefaultArgs>;
     remove(id: number, req: any): Promise<{
         number: string;
-        location: string | null;
-        qrCode: string;
+        id: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
+        location: string | null;
+        qrCode: string;
     }>;
 }

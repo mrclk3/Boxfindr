@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ItemStatus {
+  AVAILABLE
+  LENT
+}
+
+enum ActionType {
+  STOCK_CHANGE
+  MOVE
+  LENT
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  auditLogs AuditLog[]
+}
+
+model Cabinet {
+  id        Int      @id @default(autoincrement())
+  number    String   @unique
+  location  String?
+  qrCode    String   @unique @map("qr_code")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  crates    Crate[]
+}
+
+model Crate {
+  id          Int      @id @default(autoincrement())
+  number      String
+  cabinetId   Int      @map("cabinet_id")
+  categoryId  Int?     @map("category_id")
+  qrCode      String   @unique @map("qr_code")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cabinet     Cabinet  @relation(fields: [cabinetId], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id])
+  items       Item[]
+
+  @@unique([cabinetId, number])
+}
+
+model Category {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+
+  crates Crate[]
+  items  Item[]
+}
+
+model Item {
+  id          Int        @id @default(autoincrement())
+  crateId     Int        @map("crate_id")
+  categoryId  Int?       @map("category_id")
+  name        String
+  quantity    Int        @default(0)
+  minQuantity Int        @default(0) @map("min_quantity")
+  photoUrl    String?    @map("photo_url")
+  status      ItemStatus @default(AVAILABLE)
+  lentTo      String?    @map("lent_to")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  crate       Crate      @relation(fields: [crateId], references: [id])
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  auditLogs   AuditLog[]
+}
+
+model AuditLog {
+  id             Int        @id @default(autoincrement())
+  timestamp      DateTime   @default(now())
+  userId         Int        @map("user_id")
+  itemId         Int?       @map("item_id")
+  action         ActionType
+  quantityChange Int?       @map("quantity_change")
+  details        String?
+
+  user           User       @relation(fields: [userId], references: [id])
+  item           Item?      @relation(fields: [itemId], references: [id])
+
+  @@map("audit_logs")
+}
