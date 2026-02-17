@@ -5,8 +5,8 @@ export declare class AuditLogsController {
     findAll(userId?: string, action?: string, startDate?: string, endDate?: string): Promise<({
         user: {
             id: number;
-            name: string | null;
             email: string;
+            name: string | null;
             password: string;
             role: import(".prisma/client").$Enums.Role;
             createdAt: Date;
@@ -17,8 +17,8 @@ export declare class AuditLogsController {
             name: string;
             createdAt: Date;
             updatedAt: Date;
-            crateId: number;
             categoryId: number | null;
+            crateId: number;
             quantity: number;
             minQuantity: number;
             photoUrl: string | null;
@@ -28,10 +28,10 @@ export declare class AuditLogsController {
     } & {
         id: number;
         timestamp: Date;
-        userId: number;
-        itemId: number | null;
         action: import(".prisma/client").$Enums.ActionType;
         quantityChange: number | null;
         details: string | null;
+        userId: number;
+        itemId: number | null;
     })[]>;
 }

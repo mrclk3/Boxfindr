@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateCrateDto } from './dto/create-crate.dto';
 import { UpdateCrateDto } from './dto/update-crate.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class CratesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   create(createCrateDto: CreateCrateDto) {
     return this.prisma.crate.create({
@@ -58,7 +58,20 @@ export class CratesService {
     });
   }
 
-  remove(id: number) {
+  async remove(id: number) {
+    const crate = await this.prisma.crate.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+
+    if (!crate) {
+      throw new NotFoundException(`Crate with ID ${id} not found`);
+    }
+
+    if (crate.items.length > 0) {
+      throw new BadRequestException('Cannot delete crate with items');
+    }
+
     return this.prisma.crate.delete({ where: { id } });
   }
 }

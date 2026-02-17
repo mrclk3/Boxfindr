@@ -9,6 +9,8 @@ import {
   UseGuards,
   ParseIntPipe,
   Query,
+  Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { CabinetsService } from './cabinets.service';
 import { CreateCabinetDto } from './dto/create-cabinet.dto';
@@ -48,7 +50,10 @@ export class CabinetsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    if (req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Only admins can delete cabinets');
+    }
     return this.cabinetsService.remove(id);
   }
 }

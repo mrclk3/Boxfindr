@@ -28,13 +28,16 @@ export default function NewCabinetPage() {
                 body: JSON.stringify({ number, location, qrCode })
             })
 
-            if (!res.ok) throw new Error("Failed to create cabinet")
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || "Failed to create cabinet");
+            }
 
             toast.success("Cabinet created")
             router.push('/cabinets')
-        } catch (err) {
+        } catch (err: any) {
             console.error(err)
-            toast.error("Failed to create cabinet")
+            toast.error(err.message || "Failed to create cabinet")
             setSubmitting(false)
         }
     }

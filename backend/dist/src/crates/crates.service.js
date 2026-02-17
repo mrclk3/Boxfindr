@@ -61,7 +61,17 @@ let CratesService = class CratesService {
             data: { cabinetId: targetCabinetId },
         });
     }
-    remove(id) {
+    async remove(id) {
+        const crate = await this.prisma.crate.findUnique({
+            where: { id },
+            include: { items: true },
+        });
+        if (!crate) {
+            throw new common_1.NotFoundException(`Crate with ID ${id} not found`);
+        }
+        if (crate.items.length > 0) {
+            throw new common_1.BadRequestException('Cannot delete crate with items');
+        }
         return this.prisma.crate.delete({ where: { id } });
     }
 };

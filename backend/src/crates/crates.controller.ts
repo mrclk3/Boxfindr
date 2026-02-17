@@ -8,6 +8,8 @@ import {
   Delete,
   UseGuards,
   ParseIntPipe,
+  Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { CratesService } from './crates.service';
 import { CreateCrateDto } from './dto/create-crate.dto';
@@ -16,7 +18,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('crates')
 export class CratesController {
-  constructor(private readonly cratesService: CratesService) {}
+  constructor(private readonly cratesService: CratesService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -57,7 +59,10 @@ export class CratesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    if (req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Only admins can delete crates');
+    }
     return this.cratesService.remove(id);
   }
 }

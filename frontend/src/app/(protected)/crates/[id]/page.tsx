@@ -3,9 +3,11 @@ import React, { useEffect, useState } from "react"
 import { fetchClient } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, ArrowLeft, Package, Search } from "lucide-react"
+import { Loader2, ArrowLeft, Package, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { toast } from "sonner"
 
 interface Item {
     id: number
@@ -50,21 +52,51 @@ export default function CrateDetailPage({ params }: { params: Promise<{ id: stri
             .catch(err => setLoading(false))
     }, [id])
 
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+    const handleDeleteCrate = async () => {
+        if (!crate) return
+
+        try {
+            const res = await fetchClient(`/crates/${crate.id}`, {
+                method: 'DELETE'
+            })
+
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.message || "Failed to delete crate")
+            }
+
+            toast.success("Crate deleted")
+            router.push(`/cabinets/${crate.cabinet.id}`)
+        } catch (err: any) {
+            console.error(err)
+            toast.error(err.message || "Failed to delete crate")
+        }
+    }
+
     if (loading) return <div className="p-8"><Loader2 className="animate-spin" /></div>
     if (!crate) return <div className="p-8">Crate not found</div>
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div>
-                    <h1 className="text-xl font-bold">Crate {crate.number}</h1>
-                    <div className="text-sm text-muted-foreground">
-                        In Cabinet {crate.cabinet?.number}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div>
+                        <h1 className="text-xl font-bold">Crate {crate.number}</h1>
+                        <div className="text-sm text-muted-foreground">
+                            In Cabinet {crate.cabinet?.number}
+                        </div>
                     </div>
                 </div>
+                {typeof window !== 'undefined' && !!localStorage.getItem("token") && (
+                    <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete Crate
+                    </Button>
+                )}
             </div>
 
             <h2 className="text-lg font-semibold">Items in this Crate</h2>
@@ -101,6 +133,22 @@ export default function CrateDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                 )}
             </div>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Crate</DialogTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Are you sure you want to delete this crate? This action cannot be undone.
+                            Crates with items cannot be deleted.
+                        </p>
+                    </DialogHeader>
+                    <div className="flex justify-end space-x-2">
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDeleteCrate}>Delete</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

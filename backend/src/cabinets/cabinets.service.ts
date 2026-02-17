@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateCabinetDto } from './dto/create-cabinet.dto';
 import { UpdateCabinetDto } from './dto/update-cabinet.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,14 +7,21 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CabinetsService {
   constructor(private prisma: PrismaService) { }
 
-  create(createCabinetDto: CreateCabinetDto) {
-    return this.prisma.cabinet.create({
-      data: {
-        number: createCabinetDto.number,
-        location: createCabinetDto.location,
-        qrCode: createCabinetDto.qrCode,
-      },
-    });
+  async create(createCabinetDto: CreateCabinetDto) {
+    try {
+      return await this.prisma.cabinet.create({
+        data: {
+          number: createCabinetDto.number,
+          location: createCabinetDto.location,
+          qrCode: createCabinetDto.qrCode,
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('Cabinet with this number or QR code already exists');
+      }
+      throw error;
+    }
   }
 
   findAll(includeCrates: boolean = false) {
@@ -39,7 +46,20 @@ export class CabinetsService {
     });
   }
 
-  remove(id: number) {
+  async remove(id: number) {
+    const cabinet = await this.prisma.cabinet.findUnique({
+      where: { id },
+      include: { crates: true },
+    });
+
+    if (!cabinet) {
+      throw new NotFoundException(`Cabinet with ID ${id} not found`);
+    }
+
+    if (cabinet.crates.length > 0) {
+      throw new BadRequestException('Cannot delete cabinet with crates');
+    }
+
     return this.prisma.cabinet.delete({ where: { id } });
   }
 }

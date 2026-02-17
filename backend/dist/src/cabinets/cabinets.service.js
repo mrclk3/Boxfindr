@@ -17,14 +17,22 @@ let CabinetsService = class CabinetsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    create(createCabinetDto) {
-        return this.prisma.cabinet.create({
-            data: {
-                number: createCabinetDto.number,
-                location: createCabinetDto.location,
-                qrCode: createCabinetDto.qrCode,
-            },
-        });
+    async create(createCabinetDto) {
+        try {
+            return await this.prisma.cabinet.create({
+                data: {
+                    number: createCabinetDto.number,
+                    location: createCabinetDto.location,
+                    qrCode: createCabinetDto.qrCode,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'P2002') {
+                throw new common_1.ConflictException('Cabinet with this number or QR code already exists');
+            }
+            throw error;
+        }
     }
     findAll(includeCrates = false) {
         return this.prisma.cabinet.findMany({
@@ -45,7 +53,17 @@ let CabinetsService = class CabinetsService {
             data: updateCabinetDto,
         });
     }
-    remove(id) {
+    async remove(id) {
+        const cabinet = await this.prisma.cabinet.findUnique({
+            where: { id },
+            include: { crates: true },
+        });
+        if (!cabinet) {
+            throw new common_1.NotFoundException(`Cabinet with ID ${id} not found`);
+        }
+        if (cabinet.crates.length > 0) {
+            throw new common_1.BadRequestException('Cannot delete cabinet with crates');
+        }
         return this.prisma.cabinet.delete({ where: { id } });
     }
 };

@@ -41,7 +41,10 @@ let CratesController = class CratesController {
     move(id, cabinetId) {
         return this.cratesService.move(id, cabinetId);
     }
-    remove(id) {
+    remove(id, req) {
+        if (req.user.role !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Only admins can delete crates');
+        }
         return this.cratesService.remove(id);
     }
 };
@@ -89,8 +92,9 @@ __decorate([
     (0, common_1.Delete)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], CratesController.prototype, "remove", null);
 exports.CratesController = CratesController = __decorate([

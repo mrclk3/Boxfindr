@@ -13,8 +13,8 @@ export declare class ItemsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -29,25 +29,25 @@ export declare class ItemsController {
                 id: number;
                 createdAt: Date;
                 updatedAt: Date;
-                qrCode: string;
                 location: string | null;
+                qrCode: string;
             };
         } & {
             number: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
-            categoryId: number | null;
             qrCode: string;
             cabinetId: number;
+            categoryId: number | null;
         };
     } & {
         id: number;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -70,25 +70,25 @@ export declare class ItemsController {
                 id: number;
                 createdAt: Date;
                 updatedAt: Date;
-                qrCode: string;
                 location: string | null;
+                qrCode: string;
             };
         } & {
             number: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
-            categoryId: number | null;
             qrCode: string;
             cabinetId: number;
+            categoryId: number | null;
         };
     } & {
         id: number;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -97,11 +97,11 @@ export declare class ItemsController {
     })[]>;
     findOne(id: number): import(".prisma/client").Prisma.Prisma__ItemClient<({
         auditLogs: {
+            id: number;
             timestamp: Date;
             action: import(".prisma/client").$Enums.ActionType;
             quantityChange: number | null;
             details: string | null;
-            id: number;
             userId: number;
             itemId: number | null;
         }[];
@@ -111,25 +111,25 @@ export declare class ItemsController {
                 id: number;
                 createdAt: Date;
                 updatedAt: Date;
-                qrCode: string;
                 location: string | null;
+                qrCode: string;
             };
         } & {
             number: string;
             id: number;
             createdAt: Date;
             updatedAt: Date;
-            categoryId: number | null;
             qrCode: string;
             cabinetId: number;
+            categoryId: number | null;
         };
     } & {
         id: number;
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -141,8 +141,8 @@ export declare class ItemsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -154,8 +154,8 @@ export declare class ItemsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -167,8 +167,8 @@ export declare class ItemsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -180,8 +180,8 @@ export declare class ItemsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
@@ -193,8 +193,8 @@ export declare class ItemsController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        crateId: number;
         categoryId: number | null;
+        crateId: number;
         quantity: number;
         minQuantity: number;
         photoUrl: string | null;
