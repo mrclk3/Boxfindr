@@ -16,6 +16,7 @@ export default function ProtectedLayout({
 }) {
     const router = useRouter()
     const [user, setUser] = React.useState<{ email: string, role: string } | null>(null)
+    const [mounted, setMounted] = React.useState(false)
     const isAuthenticated = !!user
 
     React.useEffect(() => {
@@ -47,6 +48,7 @@ export default function ProtectedLayout({
             } else {
                 // setIsAuthenticated(false) - removed
             }
+            setMounted(true)
         }
         checkAuth()
     }, [])
@@ -61,15 +63,19 @@ export default function ProtectedLayout({
         router.push("/login")
     }
 
+    if (!mounted) {
+        return <div className="min-h-screen bg-background" suppressHydrationWarning />
+    }
+
     return (
-        <div className="flex min-h-screen flex-col bg-background pb-20">
+        <div className="flex min-h-screen flex-col bg-background pb-20" suppressHydrationWarning>
             <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b bg-background px-4 shadow-sm bg-gradient-to-r from-background to-secondary/10">
                 <Link href="/dashboard" className="font-bold text-lg text-primary hover:opacity-80 transition-opacity">
                     Boxfindr
                 </Link>
                 <div className="flex items-center gap-2">
                     <ModeToggle />
-                    {isAuthenticated && user ? (
+                    {mounted && (isAuthenticated && user ? (
                         <div className="flex items-center gap-2">
                             {user.email === 'guest@codelab.eu' ? (
                                 <>
@@ -87,7 +93,7 @@ export default function ProtectedLayout({
                         </div>
                     ) : (
                         <div className="text-sm text-muted-foreground">Logging in...</div>
-                    )}
+                    ))}
                 </div>
             </header>
             <main className="flex-1 p-4">
