@@ -1,82 +1,178 @@
 # Boxfindr
 
-**Boxfindr** is a modern, web-based inventory management system designed to help you organize your items, cabinets, and crates with ease. Built with a focus on usability and mobile-first design, it makes tracking your belongings simple and efficient.
+Boxfindr is a mobile-friendly inventory app for cabinets, crates, and items.
+
+Current active runtime in this workspace:
+- Frontend: Next.js (App Router) in frontend
+- Backend: FastAPI + Prisma Client Python in python-backend
+- Database: PostgreSQL (via docker-compose)
+
+There is also a NestJS backend in backend, but the currently integrated frontend flow is set up for the FastAPI backend.
 
 ## Features
 
-- **cabinet & Crate Management**: Organize your storage into physical cabinets and crates (boxes).
-- **Item Tracking**: Keep track of item quantities, locations, and low-stock alerts.
-- **Move & Copy**: Easily move items between boxes or copy existing item templates to new locations.
-- **QR Code Support**: Ready for QR code integration for quick scanning and lookup.
-- **User Roles**: Role-based access control (Admin/User) to secure sensitive operations.
-- **Mobile Friendly**: Responsive UI built with [Shadcn UI](https://ui.shadcn.com/) and Tailwind CSS.
-- **Theme Support**: Dark and Light mode support.
+- Cabinet and crate management with QR code values
+- Item management with quantities and minimum stock
+- Quick stock change (+/-) from item detail page
+- Move item between crates
+- Copy item template to another crate
+- Dashboard stats:
+    - Total Items
+    - Total Quantity
+    - Low Stock
+    - Items per Category
+- QR scan page with direct resolution:
+    - Crate QR -> opens crate page
+    - Cabinet QR fallback -> opens cabinet page
+- Audit log list endpoint and UI page
+- Admin and guest login endpoints
 
-## Technology Stack
+## Project Structure
 
-- **Frontend**: [Next.js](https://nextjs.org/) (App Router, React 19), Tailwind CSS, Shadcn UI.
-- **Backend**: [NestJS](https://nestjs.com/) (TypeScript), Prisma ORM.
-- **Database**: PostgreSQL.
-- **Authentication**: JWT-based auth with passport.
+- frontend: Next.js app (port 3001)
+- python-backend: FastAPI API (port 8200)
+- backend: NestJS API (legacy/alternative backend)
+- docker-compose.yml: local PostgreSQL
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+- Node.js 20+
+- Python 3.11+
+- Docker Desktop (for PostgreSQL)
 
-- Node.js (v20+)
-- Docker (for the database)
-- npm or pnpm
+## Quick Start (Recommended: FastAPI + Frontend)
 
-### Installation
+### 1. Start PostgreSQL
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/mrclk3/Boxfindr.git
-    cd Boxfindr
-    ```
+From repository root:
 
-2.  **Start the Database:**
-    Boxfindr includes a `docker-compose.yml` for quickly spinning up a PostgreSQL instance.
-    ```bash
-    docker-compose up -d
-    ```
+```bash
+docker-compose up -d
+```
 
-3.  **Backend Setup:**
-    ```bash
-    cd backend
-    npm install
-    
-    # Set up environment variables
-    # (Copy .env.example to .env and configure DATABASE_URL if needed)
-    
-    # Run database migrations and seed data
-    npx prisma migrate dev
-    npx prisma db seed
-    
-    # Start the backend server
-    npm run start:dev
-    ```
-    The backend runs on `http://localhost:3000`.
+### 2. Start FastAPI backend
 
-4.  **Frontend Setup:**
-    Open a new terminal.
-    ```bash
-    cd frontend
-    npm install
-    
-    # Start the frontend development server
-    npm run dev
-    ```
-    The frontend runs on `http://localhost:3001` (by default).
+From repository root:
 
-### Default Credentials
-- **Admin**: `admin@codelab.eu` / `admin123`
-- **User**: `user@codelab.eu` / `user123`
+```bash
+cd python-backend
+pip install -r requirements.txt
+prisma generate
+uvicorn main:app --reload --host 0.0.0.0 --port 8200
+```
 
-## Contributing
+Backend URLs:
+- API: http://127.0.0.1:8200
+- OpenAPI docs: http://127.0.0.1:8200/docs
+- Health: http://127.0.0.1:8200/health
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### 3. Start Frontend
+
+Open a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend URL:
+- http://127.0.0.1:3001
+
+## Environment Notes
+
+Frontend API target:
+- Uses NEXT_PUBLIC_API_URL if set
+- Otherwise defaults to current hostname on port 8200
+
+Example frontend env file (optional):
+
+```bash
+# frontend/.env.local
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8200
+```
+
+Backend env (python-backend):
+- DATABASE_URL must point to PostgreSQL
+- Optional: JWT_SECRET for auth token signing
+
+## Auth
+
+FastAPI auth endpoints:
+- POST /auth/login
+- POST /auth/guest
+
+Default admin credentials in current flow:
+- admin@codelab.eu
+- admin123
+
+## Main FastAPI Endpoints
+
+Core:
+- /cabinets
+- /crates
+- /items
+- /categories
+- /audit-logs
+
+Important additions:
+- GET /crates/by-qr/{qr_code}
+- GET /cabinets/by-qr/{qr_code}
+- PATCH /items/{id}/quantity
+- POST /items/{id}/transfer
+- GET /items/stats
+- GET /items/search?q=...
+- GET /items/export/shopping-list
+
+## QR Scanning (Phone)
+
+To scan from a phone in the same Wi-Fi:
+
+1. Start frontend on 0.0.0.0 (already configured in npm run dev)
+2. Start FastAPI on 0.0.0.0:8200
+3. Open frontend using your PC LAN IP on your phone
+4. Ensure your QR value matches stored crate.qrCode or cabinet.qrCode
+
+## Known Limitations
+
+- Item create currently sends JSON; image upload is not active in python-backend item creation yet.
+- Audit log listing endpoint exists; automatic write events may need further expansion depending on workflow.
+
+## Troubleshooting
+
+### Windows socket/port errors
+
+If you get WinError 10013 or port bind errors:
+
+- Try a non-reserved port (for API, prefer 8200+)
+- Check exclusions:
+
+```bash
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+- Check usage:
+
+```bash
+netstat -ano | findstr :8200
+```
+
+### Hydration mismatch in browser
+
+If you see hydration mismatch with dark_reader_root, disable the Dark Reader extension for localhost.
+
+## Optional: Run NestJS Backend
+
+If you want the TypeScript backend instead:
+
+```bash
+cd backend
+npm install
+npm run start:dev
+```
+
+Default NestJS API port is typically 3000.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT
