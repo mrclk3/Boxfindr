@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Query
+from fastapi.encoders import jsonable_encoder
 
 from db import db
 
@@ -31,8 +32,16 @@ async def get_audit_logs(
             timestamp_filter["lte"] = datetime.fromisoformat(endDate.replace("Z", "+00:00"))
         where["timestamp"] = timestamp_filter
 
-    return await db.auditlog.find_many(
+    logs = await db.auditlog.find_many(
         where=where,
         include={"user": True, "item": True},
         order={"timestamp": "desc"},
     )
+
+    encoded_logs = jsonable_encoder(logs)
+    for log in encoded_logs:
+        user = log.get("user")
+        if user:
+            user.pop("password", None)
+
+    return encoded_logs

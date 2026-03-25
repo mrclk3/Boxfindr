@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from db import db
 from dtos import CrateCreate
+from audit import log_action
 
 router = APIRouter(prefix="/crates", tags=["crates"])
 
@@ -29,7 +30,7 @@ async def get_crate(id: int):
     return crate
 
 @router.post("/")
-async def create_crate(crate: CrateCreate):
+async def create_crate(crate: CrateCreate, request: Request):
     # Check for duplicate QR code
     existing = await db.crate.find_unique(where={'qrCode': crate.qrCode})
     if existing:
@@ -42,7 +43,7 @@ async def create_crate(crate: CrateCreate):
     if existing_in_cabinet:
         raise HTTPException(status_code=409, detail="Crate number already exists in this cabinet")
 
-    return await db.crate.create(
+    created = await db.crate.create(
         data={
             'number': crate.number,
             'cabinetId': crate.cabinetId,
@@ -50,9 +51,11 @@ async def create_crate(crate: CrateCreate):
             'qrCode': crate.qrCode
         }
     )
+    await log_action(request, "CREATE", f"Created crate {created.number}")
+    return created
 
 @router.delete("/{id}")
-async def delete_crate(id: int):
+async def delete_crate(id: int, request: Request):
     crate = await db.crate.find_unique(
         where={'id': id},
         include={'items': True}
@@ -63,4 +66,6 @@ async def delete_crate(id: int):
     if crate.items and len(crate.items) > 0:
         raise HTTPException(status_code=400, detail="Cannot delete crate that contains items")
     
-    return await db.crate.delete(where={'id': id})
+    deleted = await db.crate.delete(where={'id': id})
+    await log_action(request, "DELETE", f"Deleted crate {deleted.number}")
+    return deleted

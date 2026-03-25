@@ -4,8 +4,9 @@ import Link from "next/link"
 import { BottomNav } from "@/components/bottom-nav"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { LogOut } from "lucide-react"
+import { Loader2, LogOut } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
+import { fetchClient } from "@/lib/api"
 import "./../globals.css"
 import React from "react"
 
@@ -17,39 +18,55 @@ export default function ProtectedLayout({
     const router = useRouter()
     const [user, setUser] = React.useState<{ email: string, role: string } | null>(null)
     const [mounted, setMounted] = React.useState(false)
+    const [authStatus, setAuthStatus] = React.useState<'checking' | 'authenticated' | 'anonymous'>('checking')
     const isAuthenticated = !!user
 
     React.useEffect(() => {
         const checkAuth = async () => {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || `${window.location.protocol}//${window.location.hostname}:8200`
-            let token = localStorage.getItem("token")
-            if (!token) {
-                // Auto-login as guest
-                try {
-                    const res = await fetch(`${apiUrl}/auth/guest`, { method: 'POST' })
-                    if (res.ok) {
-                        const data = await res.json()
-                        token = data.access_token
-                        localStorage.setItem("token", token!)
+            setAuthStatus('checking')
+            try {
+                let token = localStorage.getItem("token")
+                if (!token) {
+                    // Auto-login as guest with timeout to avoid hanging in checking state
+                    const controller = new AbortController()
+                    const timeoutId = window.setTimeout(() => controller.abort(), 5000)
+                    try {
+                        const res = await fetchClient('/auth/guest', {
+                            method: 'POST',
+                            signal: controller.signal,
+                        })
+                        if (res.ok) {
+                            const data = await res.json()
+                            token = data.access_token
+                            localStorage.setItem("token", token!)
+                        }
+                    } catch (e) {
+                        console.error("Guest login failed", e)
+                    } finally {
+                        window.clearTimeout(timeoutId)
                     }
-                } catch (e) {
-                    console.error("Guest login failed", e)
                 }
-            }
 
-            if (token) {
-                try {
-                    // Simple decode
-                    const payload = JSON.parse(atob(token.split('.')[1]))
-                    setUser({ email: payload.email, role: payload.role })
-                    // setIsAuthenticated(true) - removed
-                } catch (e) {
-                    // setIsAuthenticated(false) - removed
+                if (token) {
+                    try {
+                        // Simple decode
+                        const payload = JSON.parse(atob(token.split('.')[1]))
+                        setUser({ email: payload.email, role: payload.role })
+                        setAuthStatus('authenticated')
+                    } catch (e) {
+                        setUser(null)
+                        setAuthStatus('anonymous')
+                    }
+                } else {
+                    setUser(null)
+                    setAuthStatus('anonymous')
                 }
-            } else {
-                // setIsAuthenticated(false) - removed
+            } catch (e) {
+                setUser(null)
+                setAuthStatus('anonymous')
+            } finally {
+                setMounted(true)
             }
-            setMounted(true)
         }
         checkAuth()
     }, [])
@@ -65,7 +82,14 @@ export default function ProtectedLayout({
     }
 
     if (!mounted) {
-        return <div className="min-h-screen bg-background" suppressHydrationWarning />
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center" suppressHydrationWarning>
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Seite wird geladen...</span>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -93,7 +117,9 @@ export default function ProtectedLayout({
                             )}
                         </div>
                     ) : (
-                        <div className="text-sm text-muted-foreground">Logging in...</div>
+                        <Button variant="outline" size="sm" onClick={handleLogin} disabled={authStatus === 'checking'}>
+                            {authStatus === 'checking' ? 'Anmelden...' : 'Login'}
+                        </Button>
                     ))}
                 </div>
             </header>

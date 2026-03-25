@@ -27,14 +27,27 @@ export default function LoginPage() {
             })
 
             if (!res.ok) {
-                throw new Error('Login failed')
+                let message = 'Login failed'
+                try {
+                    const payload = await res.json()
+                    if (payload?.detail) {
+                        message = payload.detail
+                    }
+                } catch {
+                    // Ignore JSON parse errors and use generic message
+                }
+                throw new Error(message)
             }
 
             const data = await res.json()
             localStorage.setItem('token', data.access_token)
             router.push('/dashboard')
         } catch (err) {
-            setError("Invalid credentials. Please try again.")
+            if (err instanceof Error && err.message) {
+                setError(err.message)
+            } else {
+                setError('Login failed. Please try again.')
+            }
         }
     }
 

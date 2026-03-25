@@ -1,10 +1,11 @@
 import csv
 from io import StringIO
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 from db import db
 from dtos import ItemCreate, ItemUpdate
+from audit import log_action
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -112,7 +113,7 @@ async def get_item(id: int):
     return item
 
 @router.post("/")
-async def create_item(item: ItemCreate):
+async def create_item(item: ItemCreate, request: Request):
     crate = await db.crate.find_unique(where={'id': item.crateId})
     if not crate:
         raise HTTPException(status_code=404, detail="Crate not found")
@@ -122,7 +123,7 @@ async def create_item(item: ItemCreate):
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
 
-    return await db.item.create(
+    created = await db.item.create(
         data={
             'name': item.name,
             'crateId': item.crateId,
@@ -134,9 +135,11 @@ async def create_item(item: ItemCreate):
             'lentTo': item.lentTo
         }
     )
+    await log_action(request, "CREATE", f"Created item {created.name}", item_id=created.id)
+    return created
 
 @router.patch("/{id}")
-async def update_item(id: int, item: ItemUpdate):
+async def update_item(id: int, item: ItemUpdate, request: Request):
     # Filter out None values to only update what's payload
     update_data = {k: v for k, v in item.model_dump().items() if v is not None}
     
@@ -157,14 +160,16 @@ async def update_item(id: int, item: ItemUpdate):
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
 
-    return await db.item.update(
+    updated = await db.item.update(
         where={'id': id},
         data=update_data
     )
+    await log_action(request, "UPDATE", f"Updated item {updated.name}", item_id=updated.id)
+    return updated
 
 
 @router.patch("/{id}/quantity")
-async def update_item_quantity(id: int, payload: QuantityChangeRequest):
+async def update_item_quantity(id: int, payload: QuantityChangeRequest, request: Request):
     item = await db.item.find_unique(where={'id': id})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -173,14 +178,22 @@ async def update_item_quantity(id: int, payload: QuantityChangeRequest):
     if new_quantity < 0:
         raise HTTPException(status_code=400, detail="Quantity cannot be negative")
 
-    return await db.item.update(
+    updated = await db.item.update(
         where={'id': id},
         data={'quantity': new_quantity}
     )
+    await log_action(
+        request,
+        "STOCK_CHANGE",
+        f"Stock changed for {updated.name}: {payload.change}",
+        item_id=updated.id,
+        quantity_change=payload.change,
+    )
+    return updated
 
 
 @router.post("/{id}/transfer")
-async def transfer_item(id: int, payload: TransferItemRequest):
+async def transfer_item(id: int, payload: TransferItemRequest, request: Request):
     item = await db.item.find_unique(where={'id': id})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -189,15 +202,26 @@ async def transfer_item(id: int, payload: TransferItemRequest):
     if not target_crate:
         raise HTTPException(status_code=404, detail="Target crate not found")
 
-    return await db.item.update(
+    updated = await db.item.update(
         where={'id': id},
         data={'crateId': payload.targetCrateId},
         include={'crate': {'include': {'cabinet': True}}}
     )
+    await log_action(
+        request,
+        "MOVE",
+        f"Moved item {updated.name} to crate {payload.targetCrateId}",
+        item_id=updated.id,
+    )
+    return updated
 
 @router.delete("/{id}")
-async def delete_item(id: int):
-    try:
-        return await db.item.delete(where={'id': id})
-    except Exception:
+async def delete_item(id: int, request: Request):
+    existing = await db.item.find_unique(where={'id': id})
+    if not existing:
         raise HTTPException(status_code=404, detail="Item not found")
+
+    deleted = await db.item.delete(where={'id': id})
+    # Keep delete history without linking to a removed item row.
+    await log_action(request, "DELETE", f"Deleted item {deleted.name} (id={deleted.id})")
+    return deleted

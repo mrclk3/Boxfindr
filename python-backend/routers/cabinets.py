@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Request
 from typing import List
 from db import db
 from dtos import CabinetCreate, CabinetUpdate
+from audit import log_action
 
 router = APIRouter(prefix="/cabinets", tags=["cabinets"])
 
@@ -30,7 +31,7 @@ async def get_cabinet(id: int):
     return cabinet
 
 @router.post("/")
-async def create_cabinet(cabinet: CabinetCreate):
+async def create_cabinet(cabinet: CabinetCreate, request: Request):
     # Check for duplicate number or QR code
     existing = await db.cabinet.find_first(
         where={
@@ -43,16 +44,18 @@ async def create_cabinet(cabinet: CabinetCreate):
     if existing:
         raise HTTPException(status_code=409, detail="Cabinet with this number or QR code already exists")
     
-    return await db.cabinet.create(
+    created = await db.cabinet.create(
         data={
             'number': cabinet.number,
             'location': cabinet.location,
             'qrCode': cabinet.qrCode
         }
     )
+    await log_action(request, "CREATE", f"Created cabinet {created.number}")
+    return created
 
 @router.delete("/{id}")
-async def delete_cabinet(id: int):
+async def delete_cabinet(id: int, request: Request):
     # Check if cabinet exists and has crates
     cabinet = await db.cabinet.find_unique(
         where={'id': id},
@@ -64,4 +67,6 @@ async def delete_cabinet(id: int):
     if cabinet.crates and len(cabinet.crates) > 0:
         raise HTTPException(status_code=400, detail="Cannot delete cabinet that contains crates")
     
-    return await db.cabinet.delete(where={'id': id})
+    deleted = await db.cabinet.delete(where={'id': id})
+    await log_action(request, "DELETE", f"Deleted cabinet {deleted.number}")
+    return deleted

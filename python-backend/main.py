@@ -16,6 +16,9 @@ app = FastAPI(title="Boxfindr API (Python)", version="1.0.0", lifespan=lifespan)
 origins = [
     "http://localhost:3001",
     "http://localhost:3000",
+    "http://boxfindr.it-lab.cc:3001",
+    "http://boxfindr.it-lab.cc:3000",
+    "http://boxfindr.it-lab.cc:8200",
 ]
 
 app.add_middleware(

@@ -44,24 +44,53 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     const [targetCrateId, setTargetCrateId] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isChangingStock, setIsChangingStock] = useState(false)
+    const isMountedRef = React.useRef(true)
+    const requestControllersRef = React.useRef<Set<AbortController>>(new Set())
 
     const router = useRouter()
 
     useEffect(() => {
-        fetchClient(`/items/${id}`)
+        return () => {
+            isMountedRef.current = false
+            requestControllersRef.current.forEach((controller) => controller.abort())
+            requestControllersRef.current.clear()
+        }
+    }, [])
+
+    const createTrackedController = () => {
+        const controller = new AbortController()
+        requestControllersRef.current.add(controller)
+        return controller
+    }
+
+    const releaseTrackedController = (controller: AbortController) => {
+        requestControllersRef.current.delete(controller)
+    }
+
+    useEffect(() => {
+        const controller = createTrackedController()
+        fetchClient(`/items/${id}`, { signal: controller.signal })
             .then(res => {
                 if (!res.ok) throw new Error("Not found")
                 return res.json()
             })
             .then(data => {
+                if (!isMountedRef.current) return
                 setItem(data)
                 setName(data.name)
                 setMinQuantity(data.minQuantity)
                 setLoading(false)
             })
             .catch(err => {
+                if (err?.name === 'AbortError') return
+                if (!isMountedRef.current) return
                 setLoading(false)
             })
+
+        return () => {
+            controller.abort()
+            releaseTrackedController(controller)
+        }
     }, [id])
 
     if (loading) return <div className="p-8"><Loader2 className="animate-spin" /></div>
@@ -147,12 +176,22 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     }
 
     const handleStockChange = async (change: number) => {
+        if (!item || isChangingStock) return
+
+        const previousQuantity = item.quantity
+        const optimisticQuantity = previousQuantity + change
+        if (optimisticQuantity < 0) return
+
         setIsChangingStock(true)
+        setItem((prev) => prev ? { ...prev, quantity: optimisticQuantity } : prev)
+
+        const controller = createTrackedController()
         try {
             const res = await fetchClient(`/items/${item.id}/quantity`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ change }),
+                signal: controller.signal,
             })
 
             if (!res.ok) {
@@ -161,11 +200,18 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             }
 
             const newItem = await res.json()
-            setItem({ ...item, quantity: newItem.quantity })
+            if (!isMountedRef.current) return
+            setItem((prev) => prev ? { ...prev, quantity: newItem.quantity } : prev)
         } catch (e: any) {
+            if (e?.name === 'AbortError') return
+            if (!isMountedRef.current) return
+            setItem((prev) => prev ? { ...prev, quantity: previousQuantity } : prev)
             alert(e?.message || "Failed to update quantity")
         } finally {
-            setIsChangingStock(false)
+            releaseTrackedController(controller)
+            if (isMountedRef.current) {
+                setIsChangingStock(false)
+            }
         }
     }
 
