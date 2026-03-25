@@ -1,4 +1,3 @@
-#version: '3.8'
 services:
   db:
     image: postgres:15-alpine
@@ -12,5 +11,37 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d eurolog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./python-backend
+      dockerfile: Dockerfile
+    container_name: boxfindr-api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://admin:password@db:5432/eurolog
+      JWT_SECRET: change-me-in-production
+    ports:
+      - "8200:8200"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: boxfindr-frontend
+    restart: always
+    depends_on:
+      - api
+    ports:
+      - "3001:3001"
+
 volumes:
   postgres_data:

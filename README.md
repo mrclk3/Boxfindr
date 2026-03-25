@@ -42,6 +42,24 @@ There is also a NestJS backend in backend, but the currently integrated frontend
 
 ## Quick Start (Recommended: FastAPI + Frontend)
 
+### One-command Docker startup
+
+If you want to run everything with a single command (PostgreSQL + FastAPI + Frontend):
+
+```bash
+docker compose up -d --build
+```
+
+Then open:
+- Frontend: http://localhost:3001
+- API docs: http://localhost:8200/docs
+
+To stop everything:
+
+```bash
+docker compose down
+```
+
 ### 1. Start PostgreSQL
 
 From repository root:
@@ -139,6 +157,16 @@ To scan from a phone in the same Wi-Fi:
 - Audit log listing endpoint exists; automatic write events may need further expansion depending on workflow.
 
 ## Troubleshooting
+
+### Docker Compose startup
+
+If services do not start correctly, inspect logs:
+
+```bash
+docker compose logs -f api
+docker compose logs -f frontend
+docker compose logs -f db
+```
 
 ### Windows socket/port errors
 
