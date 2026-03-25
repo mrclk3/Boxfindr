@@ -9,6 +9,16 @@ router = APIRouter(prefix="/cabinets", tags=["cabinets"])
 async def get_cabinets():
     return await db.cabinet.find_many(include={'crates': True})
 
+@router.get("/by-qr/{qr_code}")
+async def get_cabinet_by_qr(qr_code: str):
+    cabinet = await db.cabinet.find_unique(
+        where={'qrCode': qr_code},
+        include={'crates': True}
+    )
+    if not cabinet:
+        raise HTTPException(status_code=404, detail="Cabinet not found")
+    return cabinet
+
 @router.get("/{id}")
 async def get_cabinet(id: int):
     cabinet = await db.cabinet.find_unique(

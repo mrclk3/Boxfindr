@@ -1,4 +1,7 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ||
+    (typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:8200`
+        : 'http://localhost:8200');
 
 export async function fetchClient(endpoint: string, options: RequestInit = {}) {
     const token = localStorage.getItem('token');

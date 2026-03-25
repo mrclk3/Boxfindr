@@ -6,7 +6,17 @@ router = APIRouter(prefix="/crates", tags=["crates"])
 
 @router.get("/")
 async def get_crates():
-    return await db.crate.find_many(include={'items': True})
+    return await db.crate.find_many(include={'items': True, 'cabinet': True})
+
+@router.get("/by-qr/{qr_code}")
+async def get_crate_by_qr(qr_code: str):
+    crate = await db.crate.find_unique(
+        where={'qrCode': qr_code},
+        include={'items': True, 'cabinet': True}
+    )
+    if not crate:
+        raise HTTPException(status_code=404, detail="Crate not found")
+    return crate
 
 @router.get("/{id}")
 async def get_crate(id: int):

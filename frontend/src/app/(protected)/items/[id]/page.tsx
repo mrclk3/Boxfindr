@@ -26,8 +26,8 @@ interface Item {
         cabinet: {
             number: string
             location: string
-        }
-    }
+        } | null
+    } | null
 }
 
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,6 +43,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     const [cabinets, setCabinets] = useState<any[]>([])
     const [targetCrateId, setTargetCrateId] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isChangingStock, setIsChangingStock] = useState(false)
 
     const router = useRouter()
 
@@ -146,14 +147,25 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     }
 
     const handleStockChange = async (change: number) => {
-        const res = await fetchClient(`/items/${item.id}/quantity`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ change }),
-        })
-        if (res.ok) {
+        setIsChangingStock(true)
+        try {
+            const res = await fetchClient(`/items/${item.id}/quantity`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ change }),
+            })
+
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}))
+                throw new Error(errBody?.detail || "Failed to update quantity")
+            }
+
             const newItem = await res.json()
             setItem({ ...item, quantity: newItem.quantity })
+        } catch (e: any) {
+            alert(e?.message || "Failed to update quantity")
+        } finally {
+            setIsChangingStock(false)
         }
     }
 
@@ -267,15 +279,21 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                             <div className="grid gap-2">
                                 <Label>Quantity</Label>
                                 <div className="flex items-center space-x-4">
-                                    <Button size="icon" variant="outline" onClick={() => handleStockChange(-1)} disabled={item.quantity <= 0}><Minus className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="outline" onClick={() => handleStockChange(-1)} disabled={item.quantity <= 0 || isChangingStock}><Minus className="h-4 w-4" /></Button>
                                     <span className="text-2xl font-bold">{item.quantity}</span>
-                                    <Button size="icon" variant="outline" onClick={() => handleStockChange(1)}><Plus className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="outline" onClick={() => handleStockChange(1)} disabled={isChangingStock}><Plus className="h-4 w-4" /></Button>
                                 </div>
                             </div>
 
                             <div className="grid gap-1">
                                 <Label>Location</Label>
-                                <div className="text-sm">Cabinet {item.crate.cabinet.number}, Crate {item.crate.number}</div>
+                                <div className="text-sm">
+                                    {item.crate && item.crate.cabinet
+                                        ? `Cabinet ${item.crate.cabinet.number}, Crate ${item.crate.number}`
+                                        : item.crate
+                                            ? `Crate ${item.crate.number}`
+                                            : "No crate assigned"}
+                                </div>
                             </div>
 
                             <div className="grid gap-1">

@@ -27,7 +27,7 @@ interface Cabinet {
 interface Crate {
     id: number
     number: string
-    cabinet: { id: number; number: string }
+    cabinet: { id: number; number: string } | null
 }
 
 interface Category {
@@ -67,32 +67,30 @@ export default function NewItemPage() {
         e.preventDefault()
         setSubmitting(true)
 
-        const formData = new FormData()
-        formData.append("name", name)
-        formData.append("quantity", quantity)
-        formData.append("minQuantity", minQuantity)
-        formData.append("crateId", crateId)
-        if (categoryId) formData.append("categoryId", categoryId)
-        if (file) {
-            formData.append("photo", file)
-        }
-
         try {
-            // We can't use fetchClient with JSON headers for FormData.
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/items`, {
+            const res = await fetchClient('/items', {
                 method: 'POST',
-                headers: {
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    // No Content-Type, allow browser to set boundary
-                },
-                body: formData
+                body: JSON.stringify({
+                    name,
+                    quantity: Number(quantity),
+                    minQuantity: Number(minQuantity),
+                    crateId: Number(crateId),
+                    categoryId: categoryId ? Number(categoryId) : null,
+                    photoUrl: null,
+                    status: 'AVAILABLE',
+                    lentTo: null,
+                })
             })
 
-            if (!res.ok) throw new Error("Failed")
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}))
+                throw new Error(errBody?.detail || "Failed to create item")
+            }
+
             router.push('/items')
-        } catch (err) {
+        } catch (err: any) {
             console.error(err)
+            alert(err?.message || "Failed to create item")
             setSubmitting(false)
         }
     }
@@ -145,7 +143,9 @@ export default function NewItemPage() {
                                 <SelectContent>
                                     {crates.map(crate => (
                                         <SelectItem key={crate.id} value={crate.id.toString()}>
-                                            Cabinet {crate.cabinet.number} - Crate {crate.number}
+                                            {crate.cabinet
+                                                ? `Cabinet ${crate.cabinet.number} - Crate ${crate.number}`
+                                                : `Crate ${crate.number}`}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

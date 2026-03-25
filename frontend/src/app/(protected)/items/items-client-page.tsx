@@ -15,8 +15,8 @@ interface Item {
     quantity: number
     crate: {
         number: string
-        cabinet: { number: string }
-    }
+        cabinet: { number: string } | null
+    } | null
 }
 
 export function ItemsClientPage() {
@@ -80,7 +80,11 @@ export function ItemsClientPage() {
                                 <div>
                                     <div className="font-semibold">{item.name}</div>
                                     <div className="text-xs text-muted-foreground">
-                                        Cab {item.crate.cabinet.number} / {item.crate.number}
+                                        {item.crate && item.crate.cabinet
+                                            ? `Cab ${item.crate.cabinet.number} / ${item.crate.number}`
+                                            : item.crate
+                                                ? `Crate ${item.crate.number}`
+                                                : "No crate assigned"}
                                     </div>
                                 </div>
                                 <div className="font-bold text-lg bg-secondary text-secondary-foreground px-2 py-1 rounded">

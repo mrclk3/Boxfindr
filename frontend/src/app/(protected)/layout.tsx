@@ -21,11 +21,12 @@ export default function ProtectedLayout({
 
     React.useEffect(() => {
         const checkAuth = async () => {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || `${window.location.protocol}//${window.location.hostname}:8200`
             let token = localStorage.getItem("token")
             if (!token) {
                 // Auto-login as guest
                 try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/auth/guest`, { method: 'POST' })
+                    const res = await fetch(`${apiUrl}/auth/guest`, { method: 'POST' })
                     if (res.ok) {
                         const data = await res.json()
                         token = data.access_token
