@@ -26,6 +26,13 @@ class CrateCreate(BaseModel):
     categoryId: Optional[int] = None
     qrCode: str
 
+# Category DTOs
+class CategoryCreate(BaseModel):
+    name: str
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+
 # Item DTOs
 class ItemCreate(BaseModel):
     name: str

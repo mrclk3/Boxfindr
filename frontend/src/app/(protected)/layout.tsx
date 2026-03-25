@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
+import "./../globals.css"
 import React from "react"
 
 export default function ProtectedLayout({

@@ -20,6 +20,15 @@ async def get_item(id: int):
 
 @router.post("/")
 async def create_item(item: ItemCreate):
+    crate = await db.crate.find_unique(where={'id': item.crateId})
+    if not crate:
+        raise HTTPException(status_code=404, detail="Crate not found")
+
+    if item.categoryId is not None:
+        category = await db.category.find_unique(where={'id': item.categoryId})
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+
     return await db.item.create(
         data={
             'name': item.name,
@@ -41,13 +50,24 @@ async def update_item(id: int, item: ItemUpdate):
     if not update_data:
          raise HTTPException(status_code=400, detail="No data provided for update")
 
-    try:
-        return await db.item.update(
-            where={'id': id},
-            data=update_data
-        )
-    except Exception as e:
-         raise HTTPException(status_code=404, detail="Item not found")
+    existing_item = await db.item.find_unique(where={'id': id})
+    if not existing_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if 'crateId' in update_data:
+        crate = await db.crate.find_unique(where={'id': update_data['crateId']})
+        if not crate:
+            raise HTTPException(status_code=404, detail="Crate not found")
+
+    if 'categoryId' in update_data and update_data['categoryId'] is not None:
+        category = await db.category.find_unique(where={'id': update_data['categoryId']})
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+
+    return await db.item.update(
+        where={'id': id},
+        data=update_data
+    )
 
 @router.delete("/{id}")
 async def delete_item(id: int):
