@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useRouter } from 'next/navigation';
 
 export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  
+  // Ref, um sich den zuletzt gescannten Code kurz zu merken (verhindert Popup-Spam)
+  const lastScannedRef = useRef<string | null>(null);
 
   useEffect(() => {
     const html5QrCode = new Html5Qrcode("reader");
@@ -20,26 +23,42 @@ export default function ScanPage() {
             qrbox: { width: 250, height: 250 }
           },
           (decodedText) => {
-            // 1. Kamera sofort stoppen, sobald ein Code gefunden wurde
+            // 1. Wenn dieser Code gerade erst gescannt und blockiert wurde, ignorieren wir ihn
+            if (lastScannedRef.current === decodedText) return;
+
+            // 2. Pfad extrahieren
+            let targetPath = "";
+            try {
+              const url = new URL(decodedText);
+              targetPath = url.pathname + url.search;
+            } catch {
+              targetPath = decodedText;
+            }
+
+            // 3. Prüfen, ob der Pfad zu unserem System gehört
+            const isSystemCode = targetPath.startsWith('/crates/') || 
+                                 targetPath.startsWith('/cabinets/') || 
+                                 targetPath.startsWith('/items/');
+
+            // 4. Fall: Fremder QR-Code
+            if (!isSystemCode) {
+              lastScannedRef.current = decodedText; // Code merken
+              window.alert("Dieser QR-Code gehört nicht zum System (Kiste/Schrank nicht gefunden).");
+              
+              // Nach 3 Sekunden vergessen wir den Code wieder, falls er nochmal gescannt werden soll
+              setTimeout(() => { lastScannedRef.current = null; }, 3000);
+              return; // Hier brechen wir ab, der Scanner läuft im Hintergrund weiter!
+            }
+
+            // 5. Fall: Gültiger System-Code -> Kamera stoppen und weiterleiten
             if (html5QrCode.isScanning) {
               html5QrCode.stop().then(() => {
-                
-                // 2. Weiterleitung ausführen
-                try {
-                  // Fall A: Im QR-Code steht eine komplette URL (z.B. http://boxfindr.it-lab.cc/crates/1)
-                  const url = new URL(decodedText);
-                  router.push(url.pathname + url.search);
-                } catch {
-                  // Fall B: Im QR-Code steht nur ein relativer Pfad (z.B. /crates/1 oder /cabinets/5)
-                  router.push(decodedText);
-                }
-
+                router.push(targetPath);
               }).catch(console.error);
             }
           },
           (errorMessage) => {
-            // Wird permanent aufgerufen, wenn gerade kein Code im Bild ist.
-            // Ignorieren wir, um die Konsole nicht vollzuspammen.
+            // Wird permanent aufgerufen, ignorieren wir.
           }
         );
       } catch (err) {
@@ -50,7 +69,7 @@ export default function ScanPage() {
 
     startScanner();
 
-    // Cleanup: Kamera stoppen, wenn der Nutzer die Seite (z.B. über die Bottom-Nav) verlässt
+    // Cleanup
     return () => {
       if (html5QrCode.isScanning) {
         html5QrCode.stop().catch(console.error);
