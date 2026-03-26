@@ -1,103 +1,81 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { Html5QrcodeScanner } from "html5-qrcode"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { fetchClient } from "@/lib/api"
+import { useEffect, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { useRouter } from 'next/navigation';
 
 export default function ScanPage() {
-    const [scanResult, setScanResult] = useState<string | null>(null)
-    const [statusMessage, setStatusMessage] = useState<string>("Kamera wird gestartet...")
-    const router = useRouter()
-    // Use a ref to prevent double initialization in Strict Mode
-    const scannerRef = useRef<Html5QrcodeScanner | null>(null)
-    const hasNavigatedRef = useRef(false)
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-    const resolveQrAndNavigate = async (qrValue: string) => {
-        if (hasNavigatedRef.current) {
-            return
-        }
+  useEffect(() => {
+    const html5QrCode = new Html5Qrcode("reader");
 
-        setStatusMessage("QR erkannt. Suche nach Kiste...")
+    const startScanner = async () => {
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          (decodedText) => {
+            // 1. Kamera sofort stoppen, sobald ein Code gefunden wurde
+            if (html5QrCode.isScanning) {
+              html5QrCode.stop().then(() => {
+                
+                // 2. Weiterleitung ausführen
+                try {
+                  // Fall A: Im QR-Code steht eine komplette URL (z.B. http://boxfindr.it-lab.cc/crates/1)
+                  const url = new URL(decodedText);
+                  router.push(url.pathname + url.search);
+                } catch {
+                  // Fall B: Im QR-Code steht nur ein relativer Pfad (z.B. /crates/1 oder /cabinets/5)
+                  router.push(decodedText);
+                }
 
-        try {
-            const crateResponse = await fetchClient(`/crates/by-qr/${encodeURIComponent(qrValue)}`)
-            if (crateResponse.ok) {
-                const crate = await crateResponse.json()
-                hasNavigatedRef.current = true
-                setStatusMessage(`Kiste ${crate.number} gefunden. Öffne...`)
-                router.push(`/crates/${crate.id}`)
-                return
+              }).catch(console.error);
             }
+          },
+          (errorMessage) => {
+            // Wird permanent aufgerufen, wenn gerade kein Code im Bild ist.
+            // Ignorieren wir, um die Konsole nicht vollzuspammen.
+          }
+        );
+      } catch (err) {
+        console.error("Kamera konnte nicht gestartet werden:", err);
+        setError("Bitte erlaube den Kamerazugriff in deinem Browser, um scannen zu können.");
+      }
+    };
 
-            setStatusMessage("Keine Kiste gefunden. Suche nach Schrank...")
-            const cabinetResponse = await fetchClient(`/cabinets/by-qr/${encodeURIComponent(qrValue)}`)
-            if (cabinetResponse.ok) {
-                const cabinet = await cabinetResponse.json()
-                hasNavigatedRef.current = true
-                setStatusMessage(`Schrank ${cabinet.number} gefunden. Öffne...`)
-                router.push(`/cabinets/${cabinet.id}`)
-                return
-            }
+    startScanner();
 
-            setStatusMessage("QR-Code nicht gefunden.")
-        } catch (error) {
-            console.error("QR resolve failed", error)
-            setStatusMessage("Backend nicht erreichbar.")
-        }
-    }
+    // Cleanup: Kamera stoppen, wenn der Nutzer die Seite (z.B. über die Bottom-Nav) verlässt
+    return () => {
+      if (html5QrCode.isScanning) {
+        html5QrCode.stop().catch(console.error);
+      }
+    };
+  }, [router]);
 
-    useEffect(() => {
-        // Check if element exists
-        if (!document.getElementById("reader")) return;
-
-        // Destroy previous instance if any (cleanup)
-        if (scannerRef.current) {
-            scannerRef.current.clear().catch(console.error);
-        }
-
-        const scanner = new Html5QrcodeScanner(
-            "reader",
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-      /* verbose= */ false
-        )
-        scannerRef.current = scanner;
-
-        scanner.render(
-            (decodedText) => {
-                setScanResult(decodedText)
-                scanner.clear()
-                resolveQrAndNavigate(decodedText)
-            },
-            (errorMessage) => {
-                // parse error, ignore
-            }
-        )
-
-        return () => {
-            hasNavigatedRef.current = false
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch((error) => console.error("Failed to clear html5-qrcode", error));
-            }
-        }
-    }, [router])
-
-    return (
-        <div className="space-y-4">
-            <h1 className="text-2xl font-bold text-center">Scan QR Code</h1>
-            <Card>
-                <CardContent className="p-4">
-                    {/* html5-qrcode renders here */}
-                    <div id="reader" className="w-full"></div>
-                </CardContent>
-            </Card>
-            {scanResult && (
-                <div className="text-center">
-                    <p>Scanned: {scanResult}</p>
-                    <p className="text-sm text-muted-foreground">{statusMessage}</p>
-                </div>
-            )}
+  return (
+    <div className="flex flex-col items-center p-6 space-y-6">
+      <h1 className="text-2xl font-bold">Scannen</h1>
+      
+      {error && (
+        <div className="text-red-500 bg-red-50 p-3 rounded-md text-sm text-center">
+          {error}
         </div>
-    )
+      )}
+
+      <div 
+        id="reader" 
+        className="w-full max-w-sm overflow-hidden rounded-xl shadow-lg border-2 border-dashed border-gray-300 bg-black"
+      ></div>
+      
+      <p className="text-sm text-gray-500 text-center">
+        Halte die Kamera auf den QR-Code einer Kiste oder eines Regals.
+      </p>
+    </div>
+  );
 }
