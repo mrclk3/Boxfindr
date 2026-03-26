@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Plus, Trash, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import Link from "next/link" // <-- Neu: Link importiert
 
 interface Category {
     id: number
@@ -58,7 +59,11 @@ export default function CategoriesPage() {
         }
     }
 
-    const handleDelete = async (id: number) => {
+    // <-- Neu: Event-Parameter hinzugefügt, um Navigation beim Löschen zu verhindern
+    const handleDelete = async (e: React.MouseEvent, id: number) => {
+        e.preventDefault() // Verhindert die Link-Navigation
+        e.stopPropagation() // Verhindert, dass das Klick-Event an die Eltern-Komponenten weitergegeben wird
+
         if (!confirm("Delete this category?")) return
         try {
             await fetchClient(`/categories/${id}`, { method: 'DELETE' })
@@ -110,19 +115,23 @@ export default function CategoriesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {categories.map(cat => (
-                    <Card key={cat.id}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-lg font-medium">{cat.name}</CardTitle>
-                            {isAdmin && (
-                                <Button variant="ghost" size="icon" onClick={() => handleDelete(cat.id)}>
-                                    <Trash className="h-4 w-4 text-destructive" />
-                                </Button>
-                            )}
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-xs text-muted-foreground">ID: {cat.id}</div>
-                        </CardContent>
-                    </Card>
+                    // <-- Neu: Link um die Card gewickelt
+                    <Link key={cat.id} href={`/categories/${cat.id}`} className="block h-full">
+                        <Card className="hover:bg-accent transition-colors cursor-pointer h-full flex flex-col">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-lg font-medium">{cat.name}</CardTitle>
+                                {isAdmin && (
+                                    // <-- Neu: e an handleDelete übergeben
+                                    <Button variant="ghost" size="icon" onClick={(e) => handleDelete(e, cat.id)}>
+                                        <Trash className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                )}
+                            </CardHeader>
+                            <CardContent className="flex-1">
+                                <div className="text-xs text-muted-foreground">ID: {cat.id}</div>
+                            </CardContent>
+                        </Card>
+                    </Link>
                 ))}
                 {categories.length === 0 && <div className="col-span-3 text-center p-8">No categories found.</div>}
             </div>

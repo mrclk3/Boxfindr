@@ -1,76 +1,64 @@
 # Boxfindr
 
-Boxfindr is a mobile-friendly inventory app for cabinets, crates, and items.
+![Boxfindr Logo](./boxfindr_logo.png)
 
-Current active runtime in this workspace:
-- Frontend: Next.js (App Router) in frontend
-- Backend: FastAPI + Prisma Client Python in python-backend
-- Database: PostgreSQL (via docker-compose)
+Boxfindr is a mobile-friendly inventory application for cabinet, crate, and item management with QR-based workflows.
 
-There is also a NestJS backend in backend, but the currently integrated frontend flow is set up for the FastAPI backend.
+## Current Stack
+
+- Frontend: Next.js (App Router) in `frontend`
+- API: FastAPI + Prisma Client Python in `python-backend`
+- Database: PostgreSQL
+- Reverse proxy: Nginx (`proxy/nginx.conf`)
+- Alternative/legacy API: NestJS in `backend`
 
 ## Features
 
-- Cabinet and crate management with QR code values
-- Item management with quantities and minimum stock
-- Quick stock change (+/-) from item detail page
-- Move item between crates
-- Copy item template to another crate
-- Dashboard stats:
-    - Total Items
-    - Total Quantity
-    - Low Stock
-    - Items per Category
-- QR scan page with direct resolution:
-    - Crate QR -> opens crate page
-    - Cabinet QR fallback -> opens cabinet page
-- Audit log list endpoint and UI page
-- Admin and guest login endpoints
+- Manage cabinets, crates, categories, and items
+- QR-based navigation for cabinet and crate views
+- Adjust item stock (+/-), transfer items, and copy item templates
+- Dashboard metrics (Total Items, Quantity, Low Stock, Category Stats)
+- Audit log view
+- Admin and guest login
 
 ## Project Structure
 
-- frontend: Next.js app (port 3001)
-- python-backend: FastAPI API (port 8200)
-- backend: NestJS API (legacy/alternative backend)
-- docker-compose.yml: local PostgreSQL
+- `frontend`: Next.js UI
+- `python-backend`: primary FastAPI backend
+- `backend`: NestJS alternative (not the default flow)
+- `proxy`: Nginx for unified access via port 80
+- `docker-compose.yml`: orchestrates DB, API, frontend, and proxy
 
-## Prerequisites
+## Quick Start (Recommended)
 
-- Node.js 20+
-- Python 3.11+
-- Docker Desktop (for PostgreSQL)
-
-## Quick Start (Recommended: FastAPI + Frontend)
-
-### One-command Docker startup
-
-If you want to run everything with a single command (PostgreSQL + FastAPI + Frontend):
+Start everything (DB + API + frontend + proxy):
 
 ```bash
 docker compose up -d --build
 ```
 
 Then open:
-- Frontend: http://localhost:3001
-- API docs: http://localhost:8200/docs
 
-To stop everything:
+- App: http://localhost
+- API via Proxy: http://localhost/api
+- API docs (direct): http://localhost:8200/docs
+- Health (direct): http://localhost:8200/health
+
+Stop:
 
 ```bash
 docker compose down
 ```
 
-### 1. Start PostgreSQL
+## Local Development Without Full Docker
 
-From repository root:
+### 1) Start PostgreSQL
 
 ```bash
-docker-compose up -d
+docker compose up -d db
 ```
 
-### 2. Start FastAPI backend
-
-From repository root:
+### 2) Start FastAPI
 
 ```bash
 cd python-backend
@@ -79,14 +67,7 @@ prisma generate
 uvicorn main:app --reload --host 0.0.0.0 --port 8200
 ```
 
-Backend URLs:
-- API: http://127.0.0.1:8200
-- OpenAPI docs: http://127.0.0.1:8200/docs
-- Health: http://127.0.0.1:8200/health
-
-### 3. Start Frontend
-
-Open a second terminal:
+### 3) Start Frontend
 
 ```bash
 cd frontend
@@ -94,104 +75,91 @@ npm install
 npm run dev
 ```
 
-Frontend URL:
-- http://127.0.0.1:3001
+Frontend local URL: http://localhost:3001
 
-## Environment Notes
+## Environment Variables
 
-Frontend API target:
-- Uses NEXT_PUBLIC_API_URL if set
-- Otherwise defaults to current hostname on port 8200
+### Frontend
 
-Example frontend env file (optional):
+- Uses `NEXT_PUBLIC_API_URL` if set
+- Otherwise tries sensible API base candidates (`/api`, host:8200, localhost)
+
+Example for `frontend/.env.local`:
 
 ```bash
-# frontend/.env.local
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8200
 ```
 
-Backend env (python-backend):
-- DATABASE_URL must point to PostgreSQL
-- Optional: JWT_SECRET for auth token signing
+### Python-Backend
+
+- `DATABASE_URL` must point to PostgreSQL
+- `JWT_SECRET` is optional for token signing
 
 ## Auth
 
-FastAPI auth endpoints:
-- POST /auth/login
-- POST /auth/guest
+FastAPI endpoints:
 
-Default admin credentials in current flow:
-- admin@codelab.eu
-- admin123
+- `POST /auth/login`
+- `POST /auth/guest`
 
-## Main FastAPI Endpoints
+Default admin (current flow):
+
+- Email: `admin@codelab.eu`
+- Password: `admin123`
+
+## Important API Endpoints
 
 Core:
-- /cabinets
-- /crates
-- /items
-- /categories
-- /audit-logs
 
-Important additions:
-- GET /crates/by-qr/{qr_code}
-- GET /cabinets/by-qr/{qr_code}
-- PATCH /items/{id}/quantity
-- POST /items/{id}/transfer
-- GET /items/stats
-- GET /items/search?q=...
-- GET /items/export/shopping-list
+- `/cabinets`
+- `/crates`
+- `/items`
+- `/categories`
+- `/audit-logs`
 
-## QR Scanning (Phone)
+Extended:
 
-To scan from a phone in the same Wi-Fi:
+- `GET /crates/by-qr/{qr_code}`
+- `GET /cabinets/by-qr/{qr_code}`
+- `PATCH /items/{id}/quantity`
+- `POST /items/{id}/transfer`
+- `GET /items/stats`
+- `GET /items/search?q=...`
+- `GET /items/export/shopping-list`
 
-1. Start frontend on 0.0.0.0 (already configured in npm run dev)
-2. Start FastAPI on 0.0.0.0:8200
-3. Open frontend using your PC LAN IP on your phone
-4. Ensure your QR value matches stored crate.qrCode or cabinet.qrCode
+## Mobile QR Scan Notes
 
-## Known Limitations
-
-- Item create currently sends JSON; image upload is not active in python-backend item creation yet.
-- Audit log listing endpoint exists; automatic write events may need further expansion depending on workflow.
+1. Open the frontend via your LAN IP (if using the local dev server on port 3001).
+2. Run the API on 0.0.0.0:8200.
+3. The QR value must match `crate.qrCode` or `cabinet.qrCode`.
 
 ## Troubleshooting
 
-### Docker Compose startup
+### Modules Are Red in VS Code, But the App Runs
 
-If services do not start correctly, inspect logs:
+Usually local frontend dependencies are missing for the TypeScript server:
+
+```bash
+cd frontend
+npm install
+```
+
+Then restart the TypeScript server in VS Code.
+
+### Container-Logs
 
 ```bash
 docker compose logs -f api
 docker compose logs -f frontend
 docker compose logs -f db
+docker compose logs -f proxy
 ```
 
-### Windows socket/port errors
+### Hydration-Mismatch
 
-If you get WinError 10013 or port bind errors:
-
-- Try a non-reserved port (for API, prefer 8200+)
-- Check exclusions:
-
-```bash
-netsh interface ipv4 show excludedportrange protocol=tcp
-```
-
-- Check usage:
-
-```bash
-netstat -ano | findstr :8200
-```
-
-### Hydration mismatch in browser
-
-If you see hydration mismatch with dark_reader_root, disable the Dark Reader extension for localhost.
+If you see `dark_reader_root` issues, disable Dark Reader for localhost.
 
 ## Optional: Run NestJS Backend
-
-If you want the TypeScript backend instead:
 
 ```bash
 cd backend
@@ -199,7 +167,7 @@ npm install
 npm run start:dev
 ```
 
-Default NestJS API port is typically 3000.
+Note: The current frontend flow is built around the FastAPI backend.
 
 ## License
 
