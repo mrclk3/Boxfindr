@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react"
 import { fetchClient } from "@/lib/api"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Plus, QrCode } from "lucide-react"
 import Link from "next/link"
@@ -59,7 +58,6 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-6">
-            <DashboardStats />
             <div className="space-y-2">
                 <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -96,19 +94,21 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <Link href="/scan">
-                    <Card className="flex h-32 flex-col items-center justify-center space-y-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer">
-                        <QrCode className="h-8 w-8" />
-                        <span className="font-semibold">Scan QR</span>
-                    </Card>
-                </Link>
                 <Link href="/items/new">
                     <Card className="flex h-32 flex-col items-center justify-center space-y-2 border-primary/20 hover:bg-accent transition-colors cursor-pointer">
                         <Plus className="h-8 w-8 text-primary" />
                         <span className="font-semibold">Add Item</span>
                     </Card>
                 </Link>
+                <Link href="/scan">
+                    <Card className="flex h-32 flex-col items-center justify-center space-y-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer">
+                        <QrCode className="h-8 w-8" />
+                        <span className="font-semibold">Scan QR</span>
+                    </Card>
+                </Link>
             </div>
+
+            <DashboardStats />
 
             {/* Only show recent activity if logged in as ADMIN */}
             {isAdmin && (
@@ -122,17 +122,6 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            <div className="space-y-2">
-                <h2 className="text-lg font-semibold tracking-tight">Quick Links</h2>
-                <div className="grid grid-cols-2 gap-2">
-                    <Link href="/cabinets">
-                        <Button variant="outline" className="w-full justify-start">Cabinets</Button>
-                    </Link>
-                    <Link href="/items">
-                        <Button variant="outline" className="w-full justify-start">All Items</Button>
-                    </Link>
-                </div>
-            </div>
         </div>
     )
 }

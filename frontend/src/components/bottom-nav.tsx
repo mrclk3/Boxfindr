@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Scan, Box, Layers, History } from "lucide-react"
+import { Home, Scan, Box, Layers, History, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function BottomNav() {
@@ -22,6 +22,7 @@ export function BottomNav() {
         { href: "/dashboard", label: "Home", icon: Home },
         { href: "/cabinets", label: "Cabinets", icon: Box },
         { href: "/categories", label: "Cats", icon: Layers },
+        { href: "/items", label: "Items", icon: Package },
         { href: "/scan", label: "Scan", icon: Scan },
     ]
 
