@@ -19,6 +19,7 @@ origins = [
     "http://boxfindr.it-lab.cc:3001",
     "http://boxfindr.it-lab.cc:3000",
     "http://boxfindr.it-lab.cc:8200",
+    "http://boxfindr.it-lab.cc",
 ]
 
 app.add_middleware(
