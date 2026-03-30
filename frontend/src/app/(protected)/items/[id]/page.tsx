@@ -115,15 +115,17 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
     const handleSave = async () => {
         setIsSubmitting(true)
+        const safeMinQuantity = Math.max(0, minQuantity)
         try {
             const res = await fetchClient(`/items/${item.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, minQuantity })
+                body: JSON.stringify({ name, minQuantity: safeMinQuantity })
             })
             if (!res.ok) throw new Error("Failed to update")
             const updated = await res.json()
             setItem({ ...item, ...updated })
+            setMinQuantity(safeMinQuantity)
             setEditing(false)
         } catch (e) {
             console.error(e)
@@ -334,7 +336,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="minQuantity">Min Quantity</Label>
-                                <Input type="number" id="minQuantity" value={minQuantity} onChange={e => setMinQuantity(parseInt(e.target.value) || 0)} />
+                                <Input type="number" min={0} id="minQuantity" value={minQuantity} onChange={e => setMinQuantity(Math.max(0, parseInt(e.target.value) || 0))} />
                             </div>
                         </div>
                     ) : (

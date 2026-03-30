@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
 
@@ -36,8 +36,8 @@ class ItemCreate(BaseModel):
     name: str
     crateId: int
     categoryId: Optional[int] = None
-    quantity: int = 0
-    minQuantity: int = 0
+    quantity: int = Field(default=0, ge=0)
+    minQuantity: int = Field(default=0, ge=0)
     photoUrl: Optional[str] = None
     status: ItemStatus = ItemStatus.AVAILABLE
     lentTo: Optional[str] = None
@@ -45,8 +45,8 @@ class ItemCreate(BaseModel):
 class ItemUpdate(BaseModel):
     name: Optional[str] = None
     categoryId: Optional[int] = None
-    quantity: Optional[int] = None
-    minQuantity: Optional[int] = None
+    quantity: Optional[int] = Field(default=None, ge=0)
+    minQuantity: Optional[int] = Field(default=None, ge=0)
     photoUrl: Optional[str] = None
     status: Optional[ItemStatus] = None
     lentTo: Optional[str] = None

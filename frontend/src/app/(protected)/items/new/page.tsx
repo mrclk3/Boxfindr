@@ -67,13 +67,16 @@ export default function NewItemPage() {
         e.preventDefault()
         setSubmitting(true)
 
+        const safeQuantity = Math.max(0, Number(quantity))
+        const safeMinQuantity = Math.max(0, Number(minQuantity))
+
         try {
             const res = await fetchClient('/items', {
                 method: 'POST',
                 body: JSON.stringify({
                     name,
-                    quantity: Number(quantity),
-                    minQuantity: Number(minQuantity),
+                    quantity: safeQuantity,
+                    minQuantity: safeMinQuantity,
                     crateId: Number(crateId),
                     categoryId: categoryId ? Number(categoryId) : null,
                     photoUrl: null,
@@ -112,11 +115,11 @@ export default function NewItemPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label>Quantity</Label>
-                                <Input type="number" required value={quantity} onChange={e => setQuantity(e.target.value)} />
+                                <Input type="number" min={0} required value={quantity} onChange={e => setQuantity(e.target.value)} />
                             </div>
                             <div className="grid gap-2">
                                 <Label>Min. Qty</Label>
-                                <Input type="number" required value={minQuantity} onChange={e => setMinQuantity(e.target.value)} />
+                                <Input type="number" min={0} required value={minQuantity} onChange={e => setMinQuantity(e.target.value)} />
                             </div>
                         </div>
                         <div className="grid gap-2">
