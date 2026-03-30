@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react"
 import { fetchClient } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Loader2, ArrowLeft, Box, Plus, Trash2 } from "lucide-react"
+import { Loader2, ArrowLeft, Box, Plus, Trash2, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -34,9 +34,14 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
     const router = useRouter()
 
     const [crateNumber, setCrateNumber] = useState("")
+    const [crateSearch, setCrateSearch] = useState("")
     const [creatingCrate, setCreatingCrate] = useState(false)
     const [open, setOpen] = useState(false)
     const [isAdmin, setIsAdmin] = useState(false)
+
+    const filteredCrates = cabinet?.crates?.filter((crate) =>
+        crate.number.toLowerCase().includes(crateSearch.trim().toLowerCase())
+    ) || []
 
     const fetchCabinet = () => {
         setLoading(true)
@@ -210,9 +215,19 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                 )}
             </div>
 
+            <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                    value={crateSearch}
+                    onChange={(e) => setCrateSearch(e.target.value)}
+                    placeholder="Search by crate number..."
+                    className="pl-9"
+                />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
                 {cabinet?.crates && cabinet.crates.length > 0 ? (
-                    cabinet.crates.map(crate => (
+                    filteredCrates.length > 0 ? filteredCrates.map(crate => (
                         <div key={crate.id} className="relative group">
                             <Link href={`/crates/${crate.id}`}>
                                 <Card className="hover:bg-accent transition-colors flex flex-col items-center justify-center p-4 h-24">
@@ -234,7 +249,11 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                                 <Trash2 className="h-3 w-3" />
                             </Button>
                         </div>
-                    ))
+                    )) : (
+                        <div className="col-span-2 text-center text-muted-foreground p-4">
+                            No crates match this search.
+                        </div>
+                    )
                 ) : (
                     <div className="col-span-2 text-center text-muted-foreground p-4">No crates in this cabinet.</div>
                 )}
