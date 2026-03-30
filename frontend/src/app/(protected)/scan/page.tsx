@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { fetchClient } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,11 +23,22 @@ interface ScannedItem {
 
 function parseEntityPath(raw: string): { entity: 'item' | 'crate' | 'cabinet' | null; id: number | null } {
   let path = raw;
+  let searchParams: URLSearchParams | null = null;
   try {
     const asUrl = new URL(raw);
     path = asUrl.pathname;
+    searchParams = asUrl.searchParams;
   } catch {
     path = raw.split('?')[0];
+    const query = raw.includes('?') ? raw.split('?')[1] : '';
+    searchParams = new URLSearchParams(query);
+  }
+
+  if (path === '/scan' && searchParams?.get('itemId')) {
+    const itemId = Number(searchParams.get('itemId'));
+    if (Number.isFinite(itemId) && itemId > 0) {
+      return { entity: 'item', id: itemId };
+    }
   }
 
   const itemMatch = path.match(/^\/items\/(\d+)$/);
@@ -51,14 +62,18 @@ export default function ScanPage() {
   const [amount, setAmount] = useState<string>('1');
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [suppressItemIdAutoload, setSuppressItemIdAutoload] = useState(false);
   
   // Ref, um sich den zuletzt gescannten Code kurz zu merken (verhindert Popup-Spam)
   const lastScannedRef = useRef<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [isLoadingLinkedItem, setIsLoadingLinkedItem] = useState(false);
 
   const safeAmount = Math.max(1, Number.parseInt(amount, 10) || 1);
 
-  const loadItem = async (itemId: number) => {
+  const loadItem = async (itemId: number): Promise<boolean> => {
     try {
       setBusy(true);
       const res = await fetchClient(`/items/${itemId}`);
@@ -73,9 +88,11 @@ export default function ScanPage() {
       setScanMode('idle');
       setStatusType('info');
       setStatus('Aktion wählen: Einlagern, Ausbuchen oder Umlagern.');
+      return true;
     } catch (e) {
       setStatusType('error');
       setStatus('Item konnte nicht geladen werden. Bitte erneut scannen.');
+      return false;
     } finally {
       setBusy(false);
     }
@@ -141,6 +158,62 @@ export default function ScanPage() {
   };
 
   useEffect(() => {
+    const itemIdParam = searchParams.get('itemId');
+    const itemId = Number(itemIdParam);
+
+    if (!itemIdParam) {
+      if (suppressItemIdAutoload) {
+        setSuppressItemIdAutoload(false);
+      }
+      return;
+    }
+
+    if (suppressItemIdAutoload) {
+      return;
+    }
+
+    if (!itemIdParam || !Number.isFinite(itemId) || itemId <= 0) {
+      return;
+    }
+    if (activeItem?.id === itemId) {
+      return;
+    }
+
+    let cancelled = false;
+    const loadWithRetry = async () => {
+      setIsLoadingLinkedItem(true);
+      setStatusType('info');
+      setStatus('Lade gescanntes Item...');
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        if (cancelled) return;
+        const ok = await loadItem(itemId);
+        if (ok || cancelled) {
+          setIsLoadingLinkedItem(false);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+
+      if (!cancelled) {
+        setIsLoadingLinkedItem(false);
+      }
+    };
+
+    void loadWithRetry();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, activeItem?.id, suppressItemIdAutoload]);
+
+  const shouldRunScanner = !activeItem && !searchParams.get('itemId') && !isLoadingLinkedItem;
+
+  useEffect(() => {
+    if (!shouldRunScanner) {
+      return;
+    }
+
     const html5QrCode = new Html5Qrcode("reader");
     scannerRef.current = html5QrCode;
 
@@ -217,14 +290,23 @@ export default function ScanPage() {
       }
       scannerRef.current = null;
     };
-  }, [router, scanMode]);
+  }, [router, scanMode, shouldRunScanner]);
 
   const resetFlow = () => {
+    setSuppressItemIdAutoload(true);
     setActiveItem(null);
     setScanMode('idle');
     setAmount('1');
     setStatusType('info');
     setStatus('Scanne einen Item-QR-Code, um direkt eine Aktion zu starten.');
+
+    // Prevent immediate dialog reopen when page was opened via /scan?itemId=...
+    if (searchParams.get('itemId')) {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.delete('itemId');
+      const nextQuery = nextParams.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
+    }
   };
 
   return (
@@ -241,6 +323,12 @@ export default function ScanPage() {
         id="reader" 
         className="w-full max-w-sm overflow-hidden rounded-xl shadow-lg border-2 border-dashed border-gray-300 bg-black"
       ></div>
+
+      {isLoadingLinkedItem && (
+        <div className="w-full max-w-sm rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          Gescanntes Item wird geladen...
+        </div>
+      )}
 
       <p className="text-sm text-gray-500 text-center">
         Halte die Kamera auf den QR-Code. Das Aktionsmenü erscheint automatisch.

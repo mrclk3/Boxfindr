@@ -1,5 +1,6 @@
 import base64
 import io
+import os
 from typing import Any
 
 import qrcode
@@ -7,17 +8,33 @@ import qrcode
 from db import db
 
 
+def _get_public_base_url() -> str:
+    base_url = (
+        os.getenv("QR_PUBLIC_BASE_URL")
+        or os.getenv("PUBLIC_BASE_URL")
+        or ""
+    ).strip()
+    if not base_url:
+        return ""
+    return base_url.rstrip("/")
+
+
 def build_qr_payload(entity: str, entity_id: int) -> str:
     base = entity.strip().lower()
     if base.endswith("s"):
         base = base[:-1]
 
+    public_base_url = _get_public_base_url()
+
     if base == "cabinet":
-        return f"/cabinets/{entity_id}"
+        path = f"/cabinets/{entity_id}"
+        return f"{public_base_url}{path}" if public_base_url else path
     if base == "crate":
-        return f"/crates/{entity_id}"
+        path = f"/crates/{entity_id}"
+        return f"{public_base_url}{path}" if public_base_url else path
     if base == "item":
-        return f"/items/{entity_id}"
+        path = f"/scan?itemId={entity_id}"
+        return f"{public_base_url}{path}" if public_base_url else path
 
     raise ValueError(f"Unsupported entity type: {entity}")
 
