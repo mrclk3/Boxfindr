@@ -21,6 +21,15 @@ interface ScannedItem {
   } | null;
 }
 
+type ScanTelemetryEvent = {
+  eventType: string;
+  entityType: string;
+  entityId?: number;
+  qrPayload?: string;
+  status: string;
+  errorMessage?: string;
+};
+
 function parseEntityPath(raw: string): { entity: 'item' | 'crate' | 'cabinet' | null; id: number | null } {
   let path = raw;
   let searchParams: URLSearchParams | null = null;
@@ -72,6 +81,18 @@ export default function ScanPage() {
   const [isLoadingLinkedItem, setIsLoadingLinkedItem] = useState(false);
 
   const safeAmount = Math.max(1, Number.parseInt(amount, 10) || 1);
+
+  const sendScanTelemetry = async (event: ScanTelemetryEvent) => {
+    try {
+      await fetchClient('/monitoring/scan-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
+      });
+    } catch {
+      // Best-effort telemetry only.
+    }
+  };
 
   const loadItem = async (itemId: number): Promise<boolean> => {
     try {
@@ -234,6 +255,13 @@ export default function ScanPage() {
               lastScannedRef.current = decodedText;
               setStatusType('error');
               setStatus('Dieser QR-Code gehört nicht zu Boxfindr.');
+              void sendScanTelemetry({
+                eventType: 'scan_invalid_qr',
+                entityType: 'unknown',
+                qrPayload: decodedText,
+                status: 'failed_invalid_qr',
+                errorMessage: 'QR code is not part of Boxfindr.',
+              });
               setTimeout(() => { lastScannedRef.current = null; }, 2500);
               return;
             }
@@ -244,6 +272,13 @@ export default function ScanPage() {
 
             if (scanMode === 'move-target') {
               if (entity === 'crate') {
+                void sendScanTelemetry({
+                  eventType: 'scan_move_target',
+                  entityType: 'crate',
+                  entityId: id,
+                  qrPayload: decodedText,
+                  status: 'success',
+                });
                 void executeMove(id);
                 return;
               }
@@ -251,6 +286,14 @@ export default function ScanPage() {
               if (entity === 'cabinet') {
                 setStatusType('error');
                 setStatus('Bitte eine Kiste scannen, nicht den Schrank.');
+                void sendScanTelemetry({
+                  eventType: 'scan_move_target',
+                  entityType: 'cabinet',
+                  entityId: id,
+                  qrPayload: decodedText,
+                  status: 'failed_wrong_target',
+                  errorMessage: 'Expected crate QR while moving item.',
+                });
                 return;
               }
 
@@ -261,6 +304,13 @@ export default function ScanPage() {
             }
 
             if (entity === 'item') {
+              void sendScanTelemetry({
+                eventType: 'scan_item',
+                entityType: 'item',
+                entityId: id,
+                qrPayload: decodedText,
+                status: 'success',
+              });
               void loadItem(id);
               return;
             }

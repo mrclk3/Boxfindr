@@ -38,6 +38,7 @@ model User {
   updatedAt DateTime @updatedAt
   
   auditLogs AuditLog[]
+  scanEvents ScanEvent[]
 }
 
 model Cabinet {
@@ -110,4 +111,53 @@ model AuditLog {
   item           Item?      @relation(fields: [itemId], references: [id])
 
   @@map("audit_logs")
+}
+
+model RequestMetric {
+  id         Int      @id @default(autoincrement())
+  timestamp  DateTime @default(now())
+  requestId  String?  @map("request_id")
+  method     String
+  path       String
+  statusCode Int      @map("status_code")
+  durationMs Int      @map("duration_ms")
+  isSlow     Boolean  @default(false) @map("is_slow")
+
+  @@index([timestamp])
+  @@index([path])
+  @@map("request_metrics")
+}
+
+model ErrorEvent {
+  id         Int      @id @default(autoincrement())
+  timestamp  DateTime @default(now())
+  requestId  String?  @map("request_id")
+  method     String
+  path       String
+  statusCode Int      @map("status_code")
+  errorType  String   @map("error_type")
+  details    String?
+
+  @@index([timestamp])
+  @@index([errorType])
+  @@map("error_events")
+}
+
+model ScanEvent {
+  id           Int      @id @default(autoincrement())
+  timestamp    DateTime @default(now())
+  requestId    String?  @map("request_id")
+  eventType    String   @map("event_type")
+  entityType   String   @map("entity_type")
+  entityId     Int?     @map("entity_id")
+  qrPayload    String?  @map("qr_payload")
+  status       String
+  errorMessage String?  @map("error_message")
+  userId       Int?     @map("user_id")
+
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@index([timestamp])
+  @@index([status])
+  @@map("scan_events")
 }
