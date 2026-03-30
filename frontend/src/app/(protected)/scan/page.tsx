@@ -1,18 +1,148 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useRouter } from 'next/navigation';
+import { fetchClient } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+
+type ScanMode = 'idle' | 'move-target';
+
+interface ScannedItem {
+  id: number;
+  name: string;
+  quantity: number;
+  crate?: {
+    number: string;
+    cabinet?: { number: string } | null;
+  } | null;
+}
+
+function parseEntityPath(raw: string): { entity: 'item' | 'crate' | 'cabinet' | null; id: number | null } {
+  let path = raw;
+  try {
+    const asUrl = new URL(raw);
+    path = asUrl.pathname;
+  } catch {
+    path = raw.split('?')[0];
+  }
+
+  const itemMatch = path.match(/^\/items\/(\d+)$/);
+  if (itemMatch) return { entity: 'item', id: Number(itemMatch[1]) };
+
+  const crateMatch = path.match(/^\/crates\/(\d+)$/);
+  if (crateMatch) return { entity: 'crate', id: Number(crateMatch[1]) };
+
+  const cabinetMatch = path.match(/^\/cabinets\/(\d+)$/);
+  if (cabinetMatch) return { entity: 'cabinet', id: Number(cabinetMatch[1]) };
+
+  return { entity: null, id: null };
+}
 
 export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('Scanne einen Item-QR-Code, um direkt eine Aktion zu starten.');
+  const [statusType, setStatusType] = useState<'info' | 'success' | 'error'>('info');
+  const [scanMode, setScanMode] = useState<ScanMode>('idle');
+  const [activeItem, setActiveItem] = useState<ScannedItem | null>(null);
+  const [amount, setAmount] = useState<string>('1');
+  const [busy, setBusy] = useState(false);
   const router = useRouter();
   
   // Ref, um sich den zuletzt gescannten Code kurz zu merken (verhindert Popup-Spam)
   const lastScannedRef = useRef<string | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+
+  const safeAmount = Math.max(1, Number.parseInt(amount, 10) || 1);
+
+  const loadItem = async (itemId: number) => {
+    try {
+      setBusy(true);
+      const res = await fetchClient(`/items/${itemId}`);
+      if (!res.ok) throw new Error('Item konnte nicht geladen werden.');
+      const data = await res.json();
+      setActiveItem({
+        id: data.id,
+        name: data.name,
+        quantity: data.quantity,
+        crate: data.crate,
+      });
+      setScanMode('idle');
+      setStatusType('info');
+      setStatus('Aktion wählen: Einlagern, Ausbuchen oder Umlagern.');
+    } catch (e) {
+      setStatusType('error');
+      setStatus('Item konnte nicht geladen werden. Bitte erneut scannen.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyStockChange = async (change: number) => {
+    if (!activeItem || busy) return;
+    setBusy(true);
+    try {
+      const res = await fetchClient(`/items/${activeItem.id}/quantity`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ change }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.detail || 'Bestand konnte nicht aktualisiert werden.');
+      }
+
+      const updated = await res.json();
+      setActiveItem((prev: ScannedItem | null) => prev ? { ...prev, quantity: updated.quantity } : prev);
+      setStatusType('success');
+      setStatus(change > 0 ? '✓ Erfolgreich eingelagert.' : '✓ Erfolgreich ausgebucht.');
+    } catch (e: any) {
+      setStatusType('error');
+      setStatus(e?.message || 'Aktion fehlgeschlagen.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startMoveFlow = () => {
+    if (!activeItem) return;
+    setScanMode('move-target');
+    setStatusType('info');
+    setStatus('Jetzt Ziel-Kisten-QR scannen, um umzulagern.');
+  };
+
+  const executeMove = async (targetCrateId: number) => {
+    if (!activeItem || busy) return;
+    setBusy(true);
+    try {
+      const res = await fetchClient(`/items/${activeItem.id}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetCrateId }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.detail || 'Umlagern fehlgeschlagen.');
+      }
+
+      await loadItem(activeItem.id);
+      setStatusType('success');
+      setStatus('✓ Umlagern erfolgreich.');
+    } catch (e: any) {
+      setStatusType('error');
+      setStatus(e?.message || 'Umlagern fehlgeschlagen.');
+    } finally {
+      setScanMode('idle');
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     const html5QrCode = new Html5Qrcode("reader");
+    scannerRef.current = html5QrCode;
 
     const startScanner = async () => {
       try {
@@ -26,38 +156,49 @@ export default function ScanPage() {
             // 1. Wenn dieser Code gerade erst gescannt und blockiert wurde, ignorieren wir ihn
             if (lastScannedRef.current === decodedText) return;
 
-            // 2. Pfad extrahieren
-            let targetPath = "";
-            try {
-              const url = new URL(decodedText);
-              targetPath = url.pathname + url.search;
-            } catch {
-              targetPath = decodedText;
+            const { entity, id } = parseEntityPath(decodedText);
+            if (!entity || !id) {
+              lastScannedRef.current = decodedText;
+              setStatusType('error');
+              setStatus('Dieser QR-Code gehört nicht zu Boxfindr.');
+              setTimeout(() => { lastScannedRef.current = null; }, 2500);
+              return;
             }
 
-            // 3. Prüfen, ob der Pfad zu unserem System gehört
-            const isSystemCode = targetPath.startsWith('/crates/') || 
-                                 targetPath.startsWith('/cabinets/') || 
-                                 targetPath.startsWith('/items/');
+            // Kurze Sperre für Double-Scans
+            lastScannedRef.current = decodedText;
+            setTimeout(() => { lastScannedRef.current = null; }, 1200);
 
-            // 4. Fall: Fremder QR-Code
-            if (!isSystemCode) {
-              lastScannedRef.current = decodedText; // Code merken
-              window.alert("Dieser QR-Code gehört nicht zum System (Kiste/Schrank nicht gefunden).");
-              
-              // Nach 3 Sekunden vergessen wir den Code wieder, falls er nochmal gescannt werden soll
-              setTimeout(() => { lastScannedRef.current = null; }, 3000);
-              return; // Hier brechen wir ab, der Scanner läuft im Hintergrund weiter!
+            if (scanMode === 'move-target') {
+              if (entity === 'crate') {
+                void executeMove(id);
+                return;
+              }
+
+              if (entity === 'cabinet') {
+                setStatusType('error');
+                setStatus('Bitte eine Kiste scannen, nicht den Schrank.');
+                return;
+              }
+
+              if (entity === 'item') {
+                void loadItem(id);
+                return;
+              }
             }
 
-            // 5. Fall: Gültiger System-Code -> Kamera stoppen und weiterleiten
+            if (entity === 'item') {
+              void loadItem(id);
+              return;
+            }
+
+            // Für crate/cabinet weiterhin direkt navigieren.
+            const targetPath = entity === 'crate' ? `/crates/${id}` : `/cabinets/${id}`;
             if (html5QrCode.isScanning) {
-              html5QrCode.stop().then(() => {
-                router.push(targetPath);
-              }).catch(console.error);
+              html5QrCode.stop().then(() => router.push(targetPath)).catch(console.error);
             }
           },
-          (errorMessage) => {
+          (_errorMessage) => {
             // Wird permanent aufgerufen, ignorieren wir.
           }
         );
@@ -74,8 +215,17 @@ export default function ScanPage() {
       if (html5QrCode.isScanning) {
         html5QrCode.stop().catch(console.error);
       }
+      scannerRef.current = null;
     };
-  }, [router]);
+  }, [router, scanMode]);
+
+  const resetFlow = () => {
+    setActiveItem(null);
+    setScanMode('idle');
+    setAmount('1');
+    setStatusType('info');
+    setStatus('Scanne einen Item-QR-Code, um direkt eine Aktion zu starten.');
+  };
 
   return (
     <div className="flex flex-col items-center p-6 space-y-6">
@@ -91,10 +241,106 @@ export default function ScanPage() {
         id="reader" 
         className="w-full max-w-sm overflow-hidden rounded-xl shadow-lg border-2 border-dashed border-gray-300 bg-black"
       ></div>
-      
+
       <p className="text-sm text-gray-500 text-center">
-        Halte die Kamera auf den QR-Code einer Kiste oder eines Regals.
+        Halte die Kamera auf den QR-Code. Das Aktionsmenü erscheint automatisch.
       </p>
+
+      {/* Dialog Modal für Aktionen */}
+      <Dialog open={!!activeItem} onOpenChange={(open: boolean) => { if (!open) resetFlow(); }}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">{activeItem?.name}</DialogTitle>
+            <DialogDescription className="text-center">
+              {activeItem && `Bestand: ${activeItem.quantity} | Ort: Cabinet ${activeItem.crate?.cabinet?.number || '?'} / Crate ${activeItem.crate?.number || '?'}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Status-Nachricht */}
+          {status && (
+            <div
+              className={`flex items-start gap-2 p-3 rounded-md text-sm ${
+                statusType === 'success'
+                  ? 'bg-green-50 text-green-800'
+                  : statusType === 'error'
+                    ? 'bg-red-50 text-red-800'
+                    : 'bg-blue-50 text-blue-800'
+              }`}
+            >
+              {statusType === 'success' && <CheckCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />}
+              {statusType === 'error' && <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />}
+              <span>{status}</span>
+            </div>
+          )}
+
+          {/* Menge-Input (nur wenn idle, nicht beim Umlagern) */}
+          {scanMode === 'idle' && (
+            <div className="grid gap-2">
+              <label className="text-sm font-medium" htmlFor="modal-amount">
+                Menge
+              </label>
+              <Input
+                id="modal-amount"
+                type="number"
+                min={1}
+                step={1}
+                value={amount}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
+                disabled={busy}
+              />
+            </div>
+          )}
+
+          {/* Aktions-Buttons */}
+          {scanMode === 'idle' && (
+            <div className="grid grid-cols-1 gap-2">
+              <Button
+                size="lg"
+                className="font-bold"
+                disabled={busy}
+                onClick={() => applyStockChange(safeAmount)}
+              >
+                ➕ Einlagern (+{safeAmount})
+              </Button>
+              <Button
+                size="lg"
+                variant="secondary"
+                className="font-bold"
+                disabled={busy}
+                onClick={() => applyStockChange(-safeAmount)}
+              >
+                ➖ Ausbuchen (-{safeAmount})
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="font-bold"
+                disabled={busy}
+                onClick={startMoveFlow}
+              >
+                🔄 Umlagern (Ziel scannen)
+              </Button>
+            </div>
+          )}
+
+          {/* Im Move-Modus */}
+          {scanMode === 'move-target' && (
+            <div className="text-center text-sm text-muted-foreground">
+              Bitte Ziel-Kisten-QR scannen...
+            </div>
+          )}
+
+          {/* Schließen/Reset Button */}
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={resetFlow}
+            disabled={busy}
+          >
+            Neues Item scannen
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
