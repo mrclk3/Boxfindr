@@ -44,7 +44,8 @@ model Cabinet {
   id        Int      @id @default(autoincrement())
   number    String   @unique
   location  String?
-  qrCode    String   @unique @map("qr_code")
+  qrCode    String?  @unique @map("qr_code")
+  qrImageData String? @map("qr_image_data")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -56,7 +57,8 @@ model Crate {
   number      String
   cabinetId   Int      @map("cabinet_id")
   categoryId  Int?     @map("category_id")
-  qrCode      String   @unique @map("qr_code")
+  qrCode      String?  @unique @map("qr_code")
+  qrImageData String?  @map("qr_image_data")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -79,6 +81,8 @@ model Item {
   id          Int        @id @default(autoincrement())
   crateId     Int        @map("crate_id")
   categoryId  Int?       @map("category_id")
+  qrCode      String?    @unique @map("qr_code")
+  qrImageData String?    @map("qr_image_data")
   name        String
   quantity    Int        @default(0)
   minQuantity Int        @default(0) @map("min_quantity")

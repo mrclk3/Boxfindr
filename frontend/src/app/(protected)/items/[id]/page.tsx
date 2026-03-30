@@ -16,6 +16,8 @@ import { Copy, Move } from "lucide-react"
 interface Item {
     id: number
     name: string
+    qrCode?: string
+    qrImageData?: string
     quantity: number
     minQuantity: number
     photoUrl: string | null
@@ -44,6 +46,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     const [targetCrateId, setTargetCrateId] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isChangingStock, setIsChangingStock] = useState(false)
+    const [isAdmin, setIsAdmin] = useState(false)
     const isMountedRef = React.useRef(true)
     const requestControllersRef = React.useRef<Set<AbortController>>(new Set())
 
@@ -66,6 +69,20 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     const releaseTrackedController = (controller: AbortController) => {
         requestControllersRef.current.delete(controller)
     }
+
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+        if (!token) {
+            setIsAdmin(false)
+            return
+        }
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            setIsAdmin(payload.role === 'ADMIN')
+        } catch {
+            setIsAdmin(false)
+        }
+    }, [])
 
     useEffect(() => {
         const controller = createTrackedController()
@@ -346,6 +363,17 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                                 <Label>Status</Label>
                                 <div className="text-sm font-medium">{item.status} {item.lentTo ? `(Lent to: ${item.lentTo})` : ''}</div>
                             </div>
+
+                            {isAdmin && item.qrImageData && (
+                                <div className="grid gap-2">
+                                    <Label>Item QR (Admin)</Label>
+                                    <div className="flex flex-col items-start gap-2">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={item.qrImageData} alt={`QR ${item.name}`} className="h-40 w-40 rounded border bg-white p-2" />
+                                        <div className="text-xs text-muted-foreground break-all">{item.qrCode}</div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid gap-1">
                                 <Label>Min Quantity</Label>

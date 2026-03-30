@@ -14,7 +14,6 @@ class ItemStatus(str, Enum):
 class CabinetCreate(BaseModel):
     number: str
     location: Optional[str] = None
-    qrCode: str
 
 class CabinetUpdate(BaseModel):
     location: Optional[str] = None
@@ -24,7 +23,6 @@ class CrateCreate(BaseModel):
     number: str
     cabinetId: int
     categoryId: Optional[int] = None
-    qrCode: str
 
 # Category DTOs
 class CategoryCreate(BaseModel):

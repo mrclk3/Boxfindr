@@ -19,7 +19,8 @@ interface Item {
 interface Crate {
     id: number
     number: string
-    qrCode: string
+    qrCode?: string
+    qrImageData?: string
     cabinet: {
         id: number
         number: string
@@ -35,7 +36,22 @@ export default function CrateDetailPage({ params }: { params: Promise<{ id: stri
 
     const [crate, setCrate] = useState<Crate | null>(null)
     const [loading, setLoading] = useState(true)
+    const [isAdmin, setIsAdmin] = useState(false)
     const router = useRouter()
+
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+        if (!token) {
+            setIsAdmin(false)
+            return
+        }
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            setIsAdmin(payload.role === 'ADMIN')
+        } catch {
+            setIsAdmin(false)
+        }
+    }, [])
 
     useEffect(() => {
         setLoading(true)
@@ -98,6 +114,17 @@ export default function CrateDetailPage({ params }: { params: Promise<{ id: stri
                     </Button>
                 )}
             </div>
+
+            {isAdmin && crate.qrImageData && (
+                <Card>
+                    <CardContent className="p-4 flex flex-col items-start gap-3">
+                        <div className="text-sm font-medium">Crate QR (Admin)</div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={crate.qrImageData} alt={`QR Crate ${crate.number}`} className="h-40 w-40 rounded border bg-white p-2" />
+                        <div className="text-xs text-muted-foreground break-all">{crate.qrCode}</div>
+                    </CardContent>
+                </Card>
+            )}
 
             <h2 className="text-lg font-semibold">Items in this Crate</h2>
             <div className="space-y-2">

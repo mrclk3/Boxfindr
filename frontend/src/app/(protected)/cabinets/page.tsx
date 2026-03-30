@@ -11,7 +11,7 @@ interface Cabinet {
     id: number
     number: string
     location: string | null
-    qrCode: string
+    qrCode?: string
 }
 
 export default function CabinetsPage() {

@@ -16,4 +16,4 @@ COPY . .
 
 EXPOSE 8200
 
-CMD ["sh", "-c", "prisma generate && prisma db push && uvicorn main:app --host 0.0.0.0 --port 8200"]
+CMD ["sh", "-c", "prisma generate && prisma db push --accept-data-loss && uvicorn main:app --host 0.0.0.0 --port 8200"]

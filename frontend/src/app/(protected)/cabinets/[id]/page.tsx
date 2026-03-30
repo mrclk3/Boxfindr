@@ -15,13 +15,15 @@ import { toast } from "sonner"
 interface Crate {
     id: number
     number: string
-    qrCode: string
+    qrCode?: string
 }
 
 interface Cabinet {
     id: number
     number: string
     location: string | null
+    qrCode?: string
+    qrImageData?: string
     crates: Crate[]
 }
 
@@ -32,9 +34,9 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
     const router = useRouter()
 
     const [crateNumber, setCrateNumber] = useState("")
-    const [crateQr, setCrateQr] = useState("")
     const [creatingCrate, setCreatingCrate] = useState(false)
     const [open, setOpen] = useState(false)
+    const [isAdmin, setIsAdmin] = useState(false)
 
     const fetchCabinet = () => {
         setLoading(true)
@@ -51,6 +53,20 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
         fetchCabinet()
     }, [id])
 
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+        if (!token) {
+            setIsAdmin(false)
+            return
+        }
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            setIsAdmin(payload.role === 'ADMIN')
+        } catch {
+            setIsAdmin(false)
+        }
+    }, [])
+
     const handleCreateCrate = async (e: React.FormEvent) => {
         e.preventDefault()
         setCreatingCrate(true)
@@ -59,7 +75,6 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                 method: 'POST',
                 body: JSON.stringify({
                     number: crateNumber,
-                    qrCode: crateQr,
                     cabinetId: Number(id)
                 })
             })
@@ -68,7 +83,6 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
             toast.success("Crate created")
             setOpen(false)
             setCrateNumber("")
-            setCrateQr("")
             fetchCabinet()
         } catch (err) {
             console.error(err)
@@ -156,6 +170,19 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                 Location: {cabinet?.location || 'N/A'}
             </div>
 
+            {isAdmin && cabinet?.qrImageData && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Cabinet QR (Admin)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-start gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cabinet.qrImageData} alt={`QR Cabinet ${cabinet.number}`} className="h-40 w-40 rounded border bg-white p-2" />
+                        <div className="text-xs text-muted-foreground break-all">{cabinet.qrCode}</div>
+                    </CardContent>
+                </Card>
+            )}
+
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Crates</h2>
                 {typeof window !== 'undefined' && !!localStorage.getItem("token") && (
@@ -173,10 +200,6 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                                 <div className="grid gap-2">
                                     <Label>Crate Number/ID</Label>
                                     <Input required value={crateNumber} onChange={e => setCrateNumber(e.target.value)} placeholder="e.g. A1" />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>QR Code Value</Label>
-                                    <Input required value={crateQr} onChange={e => setCrateQr(e.target.value)} placeholder="Unique QR" />
                                 </div>
                                 <Button type="submit" className="w-full" disabled={creatingCrate}>
                                     {creatingCrate ? <Loader2 className="animate-spin mr-2" /> : null} Create

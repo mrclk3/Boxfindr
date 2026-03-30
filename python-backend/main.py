@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from db import connect_db, disconnect_db
 from routers import cabinets, crates, items, categories, auth, audit_logs
+from qr_utils import ensure_all_qr_assets
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_db()
+    await ensure_all_qr_assets()
     yield
     await disconnect_db()
 

@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from db import db
 from dtos import ItemCreate, ItemUpdate
 from audit import log_action
+from qr_utils import build_qr_payload, generate_qr_data_url, strip_qr_fields
+from security import is_admin_request
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -18,15 +20,18 @@ class TransferItemRequest(BaseModel):
     targetCrateId: int
 
 @router.get("/")
-async def get_items(lowStock: bool = False):
+async def get_items(request: Request, lowStock: bool = False):
     items = await db.item.find_many(include={'crate': {'include': {'cabinet': True}}})
-    if lowStock:
-        return [item for item in items if item.quantity < item.minQuantity]
-    return items
+    data = [item for item in items if item.quantity < item.minQuantity] if lowStock else items
+
+    if await is_admin_request(request):
+        return data
+
+    return strip_qr_fields(data)
 
 
 @router.get("/search")
-async def search_items(q: str):
+async def search_items(q: str, request: Request):
     items = await db.item.find_many(
         where={
             'name': {
@@ -36,7 +41,9 @@ async def search_items(q: str):
         },
         include={'crate': {'include': {'cabinet': True}}}
     )
-    return items
+    if await is_admin_request(request):
+        return items
+    return strip_qr_fields(items)
 
 
 @router.get("/stats")
@@ -103,14 +110,16 @@ async def export_shopping_list():
     )
 
 @router.get("/{id}")
-async def get_item(id: int):
+async def get_item(id: int, request: Request):
     item = await db.item.find_unique(
         where={'id': id},
         include={'crate': {'include': {'cabinet': True}}}
     )
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    return item
+    if await is_admin_request(request):
+        return item
+    return strip_qr_fields(item)
 
 @router.post("/")
 async def create_item(item: ItemCreate, request: Request):
@@ -135,8 +144,21 @@ async def create_item(item: ItemCreate, request: Request):
             'lentTo': item.lentTo
         }
     )
+
+    qr_payload = build_qr_payload('item', created.id)
+    qr_image = generate_qr_data_url(qr_payload)
+    created = await db.item.update(
+        where={'id': created.id},
+        data={
+            'qrCode': qr_payload,
+            'qrImageData': qr_image,
+        }
+    )
+
     await log_action(request, "CREATE", f"Created item {created.name}", item_id=created.id)
-    return created
+    if await is_admin_request(request):
+        return created
+    return strip_qr_fields(created)
 
 @router.patch("/{id}")
 async def update_item(id: int, item: ItemUpdate, request: Request):
@@ -165,7 +187,9 @@ async def update_item(id: int, item: ItemUpdate, request: Request):
         data=update_data
     )
     await log_action(request, "UPDATE", f"Updated item {updated.name}", item_id=updated.id)
-    return updated
+    if await is_admin_request(request):
+        return updated
+    return strip_qr_fields(updated)
 
 
 @router.patch("/{id}/quantity")
@@ -189,7 +213,9 @@ async def update_item_quantity(id: int, payload: QuantityChangeRequest, request:
         item_id=updated.id,
         quantity_change=payload.change,
     )
-    return updated
+    if await is_admin_request(request):
+        return updated
+    return strip_qr_fields(updated)
 
 
 @router.post("/{id}/transfer")
@@ -213,7 +239,9 @@ async def transfer_item(id: int, payload: TransferItemRequest, request: Request)
         f"Moved item {updated.name} to crate {payload.targetCrateId}",
         item_id=updated.id,
     )
-    return updated
+    if await is_admin_request(request):
+        return updated
+    return strip_qr_fields(updated)
 
 @router.delete("/{id}")
 async def delete_item(id: int, request: Request):

@@ -51,34 +51,34 @@ export function DashboardStats() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="hidden lg:block">
+            <Card className="hidden lg:block gap-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Items</CardTitle>
                     <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                     <div className="text-2xl font-bold">{stats.totalItems}</div>
                     <p className="text-xs text-muted-foreground">Unique types of items</p>
                 </CardContent>
             </Card>
-            <Card className="hidden lg:block">
+            <Card className="hidden lg:block gap-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Quantity</CardTitle>
                     <Layers className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                     <div className="text-2xl font-bold">{stats.totalQuantity}</div>
                     <p className="text-xs text-muted-foreground">Individual units in stock</p>
                 </CardContent>
             </Card>
             <div className="relative group h-full hidden lg:block">
                 <Link href="/items?lowStock=true" className="block h-full transition-transform hover:scale-105">
-                    <Card className="h-full cursor-pointer hover:border-destructive/50">
+                    <Card className="h-full cursor-pointer hover:border-destructive/50 gap-0">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
                             <AlertTriangle className={`h-4 w-4 ${stats.lowStockItems > 0 ? "text-destructive" : "text-muted-foreground"}`} />
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-0">
                             <div className={`text-2xl font-bold ${stats.lowStockItems > 0 ? "text-destructive" : ""}`}>{stats.lowStockItems}</div>
                             <p className="text-xs text-muted-foreground">Items below minimum stock</p>
                         </CardContent>
@@ -97,11 +97,11 @@ export function DashboardStats() {
                 )}
             </div>
 
-            <Card className="hidden lg:block lg:col-span-3">
+            <Card className="hidden lg:block lg:col-span-3 gap-0">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium">Items per Category</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                     <div className="flex flex-wrap gap-4">
                         {stats.categories && stats.categories.length > 0 ? (
                             stats.categories.map((cat: any) => (
