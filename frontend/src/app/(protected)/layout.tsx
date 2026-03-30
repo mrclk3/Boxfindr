@@ -61,7 +61,7 @@ function GlobalSearch() {
     }
 
     return (
-        <div className="relative flex-1 max-w-md mx-4">
+        <div className="relative w-full">
             <form onSubmit={handleSearch} className="relative w-full">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -189,7 +189,9 @@ export default function ProtectedLayout({
                 </Link>
                 
                 {/* Hier binden wir die neue Suchleiste ein */}
-                <GlobalSearch />
+                <div className="hidden lg:block lg:flex-1 lg:max-w-md lg:mx-4">
+                    <GlobalSearch />
+                </div>
 
                 <div className="flex items-center gap-2">
                     <ModeToggle />

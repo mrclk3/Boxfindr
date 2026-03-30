@@ -58,7 +58,7 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-6">
-            <div className="space-y-2">
+            <div className="space-y-2 lg:hidden">
                 <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
