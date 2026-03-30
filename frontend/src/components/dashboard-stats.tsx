@@ -51,7 +51,7 @@ export function DashboardStats() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card className="hidden lg:block">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Items</CardTitle>
                     <Package className="h-4 w-4 text-muted-foreground" />
@@ -61,7 +61,7 @@ export function DashboardStats() {
                     <p className="text-xs text-muted-foreground">Unique types of items</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="hidden lg:block">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Quantity</CardTitle>
                     <Layers className="h-4 w-4 text-muted-foreground" />
@@ -71,7 +71,7 @@ export function DashboardStats() {
                     <p className="text-xs text-muted-foreground">Individual units in stock</p>
                 </CardContent>
             </Card>
-            <div className="relative group h-full">
+            <div className="relative group h-full hidden lg:block">
                 <Link href="/items?lowStock=true" className="block h-full transition-transform hover:scale-105">
                     <Card className="h-full cursor-pointer hover:border-destructive/50">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -97,7 +97,7 @@ export function DashboardStats() {
                 )}
             </div>
 
-            <Card className="md:col-span-3">
+            <Card className="hidden lg:block lg:col-span-3">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium">Items per Category</CardTitle>
                 </CardHeader>
