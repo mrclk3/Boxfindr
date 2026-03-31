@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, ArrowLeft, Save, Edit, Minus, Plus, BoxSelect } from "lucide-react" // Icons
+import { Loader2, ArrowLeft, Save, Edit, Minus, Plus } from "lucide-react" // Icons
 import { useRouter } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Copy, Move } from "lucide-react"
+import { toast } from "sonner"
 
 interface Item {
     id: number
@@ -24,6 +25,7 @@ interface Item {
     status: string
     lentTo: string | null
     crate: {
+        id: number
         number: string
         cabinet: {
             number: string
@@ -69,6 +71,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     const releaseTrackedController = (controller: AbortController) => {
         requestControllersRef.current.delete(controller)
     }
+
 
     useEffect(() => {
         const token = localStorage.getItem("token")
@@ -129,7 +132,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             setEditing(false)
         } catch (e) {
             console.error(e)
-            alert("Failed to save changes")
+            toast.error("Failed to save changes")
         } finally {
             setIsSubmitting(false)
         }
@@ -148,6 +151,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     const handleMove = async () => {
         if (!targetCrateId) return
         setIsSubmitting(true)
+        const previousCrateId = item?.crate?.id
         try {
             const res = await fetchClient(`/items/${item.id}/transfer`, {
                 method: 'POST',
@@ -161,8 +165,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
             setMoveOpen(false)
             setTargetCrateId("")
+
+            if (previousCrateId) {
+                toast.success("Item moved")
+            }
         } catch (e) {
-            alert("Failed to move item")
+            toast.error("Failed to move item")
         } finally {
             setIsSubmitting(false)
         }
@@ -184,11 +192,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 })
             })
             if (!res.ok) throw new Error("Failed to copy")
-            alert("Item copied to new box!")
+            toast.success("Item copied to new box")
             setCopyOpen(false)
             setTargetCrateId("")
         } catch (e) {
-            alert("Failed to copy item")
+            toast.error("Failed to copy item")
         } finally {
             setIsSubmitting(false)
         }
@@ -221,11 +229,13 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             const newItem = await res.json()
             if (!isMountedRef.current) return
             setItem((prev) => prev ? { ...prev, quantity: newItem.quantity } : prev)
+
+            toast.success(`Stock ${change > 0 ? 'increased' : 'decreased'}`)
         } catch (e: any) {
             if (e?.name === 'AbortError') return
             if (!isMountedRef.current) return
             setItem((prev) => prev ? { ...prev, quantity: previousQuantity } : prev)
-            alert(e?.message || "Failed to update quantity")
+            toast.error(e?.message || "Failed to update quantity")
         } finally {
             releaseTrackedController(controller)
             if (isMountedRef.current) {
@@ -239,9 +249,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         try {
             const res = await fetchClient(`/items/${item.id}`, { method: 'DELETE' })
             if (!res.ok) throw new Error("Failed to delete")
+            toast.success("Item deleted")
+            setDeleteOpen(false)
             router.push('/items')
-        } catch (err) {
-            alert("Failed to delete item (Ensure quantity is 0)")
+        } catch {
+            toast.error("Failed to delete item (ensure quantity is 0)")
         }
     }
 
@@ -393,7 +405,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                             <DialogHeader>
                                 <DialogTitle>Delete Item</DialogTitle>
                                 <DialogDescription>
-                                    Are you sure you want to delete <strong>{item.name}</strong>? This action cannot be undone.
+                                    Are you sure you want to delete <strong>{item.name}</strong>?
                                 </DialogDescription>
                             </DialogHeader>
                             <DialogFooter>

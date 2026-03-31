@@ -166,7 +166,7 @@ export default function CrateDetailPage({ params }: { params: Promise<{ id: stri
                     <DialogHeader>
                         <DialogTitle>Delete Crate</DialogTitle>
                         <p className="text-sm text-muted-foreground">
-                            Are you sure you want to delete this crate? This action cannot be undone.
+                            Are you sure you want to delete this crate?
                             Crates with items cannot be deleted.
                         </p>
                     </DialogHeader>

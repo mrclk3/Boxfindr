@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Plus, Trash, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import Link from "next/link" // <-- Neu: Link importiert
+import Link from "next/link"
 
 interface Category {
     id: number
@@ -22,6 +22,8 @@ export default function CategoriesPage() {
     const [newCategoryName, setNewCategoryName] = useState("")
     const [creating, setCreating] = useState(false)
     const [open, setOpen] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [categoryToDelete, setCategoryToDelete] = useState<number | null>(null)
 
     const fetchCategories = () => {
         setLoading(true)
@@ -37,6 +39,23 @@ export default function CategoriesPage() {
     useEffect(() => {
         fetchCategories()
     }, [])
+
+    const handleDelete = async () => {
+        const id = categoryToDelete
+        if (!id) return
+
+        try {
+            const res = await fetchClient(`/categories/${id}`, { method: 'DELETE' })
+            if (!res.ok) throw new Error("Failed to delete")
+
+            setCategories(prev => prev.filter(category => category.id !== id))
+            toast.success("Category deleted")
+            setDeleteDialogOpen(false)
+            setCategoryToDelete(null)
+        } catch (err) {
+            toast.error("Failed to delete")
+        }
+    }
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -59,19 +78,12 @@ export default function CategoriesPage() {
         }
     }
 
-    // <-- Neu: Event-Parameter hinzugefügt, um Navigation beim Löschen zu verhindern
-    const handleDelete = async (e: React.MouseEvent, id: number) => {
-        e.preventDefault() // Verhindert die Link-Navigation
-        e.stopPropagation() // Verhindert, dass das Klick-Event an die Eltern-Komponenten weitergegeben wird
+    const handleDeleteClick = (e: React.MouseEvent, id: number) => {
+        e.preventDefault()
+        e.stopPropagation()
 
-        if (!confirm("Delete this category?")) return
-        try {
-            await fetchClient(`/categories/${id}`, { method: 'DELETE' })
-            toast.success("Category deleted")
-            fetchCategories()
-        } catch (err) {
-            toast.error("Failed to delete")
-        }
+        setCategoryToDelete(id)
+        setDeleteDialogOpen(true)
     }
 
     // Check if user is admin (simple local check for UI)
@@ -115,14 +127,16 @@ export default function CategoriesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {categories.map(cat => (
-                    // <-- Neu: Link um die Card gewickelt
                     <Link key={cat.id} href={`/categories/${cat.id}`} className="block h-full">
                         <Card className="hover:bg-accent transition-colors cursor-pointer h-full flex flex-col">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-lg font-medium">{cat.name}</CardTitle>
                                 {isAdmin && (
-                                    // <-- Neu: e an handleDelete übergeben
-                                    <Button variant="ghost" size="icon" onClick={(e) => handleDelete(e, cat.id)}>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={(e) => handleDeleteClick(e, cat.id)}
+                                    >
                                         <Trash className="h-4 w-4 text-destructive" />
                                     </Button>
                                 )}
@@ -135,6 +149,29 @@ export default function CategoriesPage() {
                 ))}
                 {categories.length === 0 && <div className="col-span-3 text-center p-8">No categories found.</div>}
             </div>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Category</DialogTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Are you sure you want to delete this category?
+                        </p>
+                    </DialogHeader>
+                    <div className="flex justify-end space-x-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setDeleteDialogOpen(false)
+                                setCategoryToDelete(null)
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

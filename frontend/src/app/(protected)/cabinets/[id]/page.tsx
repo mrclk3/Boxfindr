@@ -11,11 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Crate {
     id: number
     number: string
     qrCode?: string
+    updatedAt?: string
 }
 
 interface Cabinet {
@@ -35,13 +37,23 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
 
     const [crateNumber, setCrateNumber] = useState("")
     const [crateSearch, setCrateSearch] = useState("")
+    const [crateSort, setCrateSort] = useState("UPDATED_DESC")
     const [creatingCrate, setCreatingCrate] = useState(false)
     const [open, setOpen] = useState(false)
     const [isAdmin, setIsAdmin] = useState(false)
 
-    const filteredCrates = cabinet?.crates?.filter((crate) =>
-        crate.number.toLowerCase().includes(crateSearch.trim().toLowerCase())
-    ) || []
+    const filteredCrates = (cabinet?.crates || [])
+        .filter((crate) =>
+            crate.number.toLowerCase().includes(crateSearch.trim().toLowerCase())
+        )
+        .sort((a, b) => {
+            if (crateSort === "NUMBER_ASC") return a.number.localeCompare(b.number)
+            if (crateSort === "NUMBER_DESC") return b.number.localeCompare(a.number)
+
+            const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+            const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+            return bTime - aTime
+        })
 
     const fetchCabinet = () => {
         setLoading(true)
@@ -138,6 +150,7 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
             }
 
             toast.success("Cabinet deleted")
+            setDeleteCabinetDialogOpen(false)
             router.push('/cabinets')
         } catch (err: any) {
             console.error(err)
@@ -215,14 +228,27 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                 )}
             </div>
 
-            <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                    value={crateSearch}
-                    onChange={(e) => setCrateSearch(e.target.value)}
-                    placeholder="Search by crate number..."
-                    className="pl-9"
-                />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        value={crateSearch}
+                        onChange={(e) => setCrateSearch(e.target.value)}
+                        placeholder="Search by crate number..."
+                        className="pl-9"
+                    />
+                </div>
+
+                <Select value={crateSort} onValueChange={setCrateSort}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Sort crates" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="UPDATED_DESC">Recently updated</SelectItem>
+                        <SelectItem value="NUMBER_ASC">Number A-Z</SelectItem>
+                        <SelectItem value="NUMBER_DESC">Number Z-A</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -264,7 +290,7 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                     <DialogHeader>
                         <DialogTitle>Delete Crate</DialogTitle>
                         <p className="text-sm text-muted-foreground">
-                            Are you sure you want to delete this crate? This action cannot be undone.
+                            Are you sure you want to delete this crate?
                             Crates with items cannot be deleted.
                         </p>
                     </DialogHeader>
@@ -280,7 +306,7 @@ export default function CabinetDetailPage({ params }: { params: Promise<{ id: st
                     <DialogHeader>
                         <DialogTitle>Delete Cabinet</DialogTitle>
                         <p className="text-sm text-muted-foreground">
-                            Are you sure you want to delete this cabinet? This action cannot be undone.
+                            Are you sure you want to delete this cabinet?
                             Cabinets containing crates cannot be deleted.
                         </p>
                     </DialogHeader>

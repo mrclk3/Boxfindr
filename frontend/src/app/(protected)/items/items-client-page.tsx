@@ -8,11 +8,14 @@ import { Search, Plus } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Item {
     id: number
     name: string
     quantity: number
+    minQuantity: number
+    updatedAt?: string
     crate: {
         number: string
         cabinet: { number: string } | null
@@ -22,16 +25,15 @@ interface Item {
 export function ItemsClientPage() {
     const [items, setItems] = useState<Item[]>([])
     const [search, setSearch] = useState("")
+    const [quantityFilter, setQuantityFilter] = useState("ALL")
+    const [sortBy, setSortBy] = useState("UPDATED_DESC")
     const [loading, setLoading] = useState(true)
     const searchParams = useSearchParams()
     const lowStock = searchParams.get('lowStock')
 
     useEffect(() => {
         let url = '/items'
-
-        if (search) {
-            url = `/items/search?q=${search}`
-        } else if (lowStock === 'true') {
+        if (lowStock === 'true') {
             url = '/items?lowStock=true'
         }
 
@@ -43,7 +45,33 @@ export function ItemsClientPage() {
                 setLoading(false)
             })
             .catch(err => setLoading(false))
-    }, [search, lowStock])
+    }, [lowStock])
+
+    const visibleItems = items
+        .filter((item) => {
+            const q = search.trim().toLowerCase()
+            if (!q) return true
+            return (
+                item.name.toLowerCase().includes(q) ||
+                item.crate?.number?.toLowerCase().includes(q) ||
+                item.crate?.cabinet?.number?.toLowerCase().includes(q)
+            )
+        })
+        .filter((item) => {
+            if (quantityFilter === "LOW_STOCK") return item.quantity < item.minQuantity
+            if (quantityFilter === "OUT_OF_STOCK") return item.quantity === 0
+            if (quantityFilter === "IN_STOCK") return item.quantity > 0
+            return true
+        })
+        .sort((a, b) => {
+            if (sortBy === "QTY_ASC") return a.quantity - b.quantity
+            if (sortBy === "QTY_DESC") return b.quantity - a.quantity
+            if (sortBy === "NAME_ASC") return a.name.localeCompare(b.name)
+
+            const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+            const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+            return bTime - aTime
+        })
 
     return (
         <div className="space-y-4">
@@ -63,6 +91,32 @@ export function ItemsClientPage() {
                 </Link>
             </div>
 
+            <div className="grid grid-cols-2 gap-2">
+                <Select value={quantityFilter} onValueChange={setQuantityFilter}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">All quantities</SelectItem>
+                        <SelectItem value="LOW_STOCK">Low stock</SelectItem>
+                        <SelectItem value="OUT_OF_STOCK">Out of stock</SelectItem>
+                        <SelectItem value="IN_STOCK">In stock</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Sort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="UPDATED_DESC">Recently updated</SelectItem>
+                        <SelectItem value="QTY_ASC">Qty ascending</SelectItem>
+                        <SelectItem value="QTY_DESC">Qty descending</SelectItem>
+                        <SelectItem value="NAME_ASC">Name A-Z</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
             {lowStock === 'true' && (
                 <div className="flex items-center justify-between bg-destructive/10 text-destructive px-4 py-2 rounded-md">
                     <span className="text-sm font-medium">Filtering by Low Stock (&lt; 5)</span>
@@ -73,7 +127,7 @@ export function ItemsClientPage() {
             )}
 
             <div className="grid gap-2">
-                {items.map(item => (
+                {visibleItems.map(item => (
                     <Link key={item.id} href={`/items/${item.id}`}>
                         <Card className="hover:bg-accent transition-colors">
                             <CardContent className="p-4 flex justify-between items-center">
@@ -94,7 +148,7 @@ export function ItemsClientPage() {
                         </Card>
                     </Link>
                 ))}
-                {!loading && items.length === 0 && <div className="text-center p-4">No items found.</div>}
+                {!loading && visibleItems.length === 0 && <div className="text-center p-4">No items found.</div>}
             </div>
         </div>
     )
